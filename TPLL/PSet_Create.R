@@ -246,7 +246,7 @@ TPLL_WGS_MUT <- get_summarized_experiment(wgs_mut, clinical_data, features_gene,
 
 ##### 4.4 Create WES (Whole Exome Sequencing) single-end and paired-end mutation data SummarizedExperiments#####
 ### Single-end Mutation Data ###
-TPLL_WES_MUT_SINGLE <- get_summarized_experiment(wes_mut_single, clinical_data, features_gene, 'gene_name', 'mutation')
+TPLL_WES_MUT_SINGLE <- get_summarized_experiment(wes_mut_single_merged, clinical_data, features_gene, 'gene_name', 'mutation')
 
 ### Paied-end Mutation Data ###
 TPLL_WES_MUT_PAIRED <- get_summarized_experiment(wes_mut_paired, clinical_data, features_gene, 'gene_name', 'mutation')
@@ -282,12 +282,32 @@ saveRDS(PSet, file="PSet.RDS")
 ##### 5: Using PSet #####
 #########################
 
-# get summary of molecular profiles:
+# 1. get summary of molecular profiles:
 PSet@molecularProfiles
 
-# get summary of each molecular profile:
-# for GEP
+# 2. get summary of each molecular profile:
+## for GEP
 summarizeMolecularProfiles(PSet, mData='rnaseq')
 
-# for SNP, WES and WGS mutation data (change 'mData' parameter to corresponding profile name)
+## for SNP, WES and WGS mutation data (change 'mData' parameter to corresponding profile name)
 summarizeMolecularProfiles(PSet, mData='snp', summary.stat='and')
+
+# 3. summary of a molecular profile with a specific sample and  specific gene
+# 'cell.lines' accespts one or more sample names
+# for GEP, 'features' parameter accepts Ensembl ID(s)
+gep_summary <- summarizeMolecularProfiles(PSet, mData='rnaseq', cell.lines = 'TP047', features='ENSG00000223972')
+gep_summary@assays@data$exprs # displays the summary 
+
+# for SNP, WES and WGS mutation data, 'features' parameter accepts gene names
+snp_summary <- summarizeMolecularProfiles(PSet, mData='snp', summary.stat='and', cell.lines='TP047', features='ZXDB')
+snp_summary@assays@data$exprs
+
+wes_single_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines='TP014', features=c('A1CF', 'ABCB6'))
+wes_single_summary@assays@data$exprs
+
+# to summarize the time series data,
+# 1. obtain samples that are in the time series
+samples <- data.frame(PSet@molecularProfiles$mut_wes_single@colData)
+timeseries_samples <- samples[!is.na(samples$timeseries_wes_mut_single), c('cellid', 'timeseries_wes_mut_single')]
+timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines=rownames(timeseries_samples[timeseries_samples$timeseries_wes_mut_single == 'TP092', ]), features=c('A1CF', 'ABCB6')) 
+timeseries_summary@assays@data$exprs
