@@ -2,6 +2,7 @@
 library(PharmacoGx)
 library(SummarizedExperiment)
 library(dplyr)
+library(stringr)
 
 ##### Functions #####
 read_and_format_data <- function(path){
@@ -246,6 +247,16 @@ TPLL_WGS_MUT <- get_summarized_experiment(wgs_mut, clinical_data, features_gene,
 
 ##### 4.4 Create WES (Whole Exome Sequencing) single-end and paired-end mutation data SummarizedExperiments#####
 ### Single-end Mutation Data ###
+# wes_mut_single_merged[wes_mut_single_merged == 'unmutated'] <- 'wt'
+# tmp <- wes_mut_single_merged
+# for(col in colnames(wes_mut_single_merged)){
+#   print(col)
+#   for(row in rownames(wes_mut_single_merged)){
+#     if(!is.na(wes_mut_single_merged[row, col]) && wes_mut_single_merged[row, col] != 'wt'){
+#       wes_mut_single_merged[row, col] <- str_match(wes_mut_single_merged[row, col], ":(p.*?):")[1,2]
+#     }
+#   }
+# }
 TPLL_WES_MUT_SINGLE <- get_summarized_experiment(wes_mut_single_merged, clinical_data, features_gene, 'gene_name', 'mutation')
 
 ### Paied-end Mutation Data ###
@@ -276,7 +287,7 @@ PSet <- PharmacoGx::PharmacoSet(
 
 PSet@annotation$version <- 1	
 
-saveRDS(PSet, file="PSet.RDS")
+saveRDS(PSet, file="TPLL_PSet.RDS")
 
 #########################
 ##### 5: Using PSet #####
@@ -302,12 +313,13 @@ gep_summary@assays@data$exprs # displays the summary
 snp_summary <- summarizeMolecularProfiles(PSet, mData='snp', summary.stat='and', cell.lines='TP047', features='ZXDB')
 snp_summary@assays@data$exprs
 
-wes_single_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines='TP014', features=c('A1CF', 'ABCB6'))
+wes_single_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines=c('TP014'), features=c('A1CF', 'ABCB6'))
 wes_single_summary@assays@data$exprs
 
 # to summarize the time series data,
 # 1. obtain samples that are in the time series
 samples <- data.frame(PSet@molecularProfiles$mut_wes_single@colData)
 timeseries_samples <- samples[!is.na(samples$timeseries_wes_mut_single), c('cellid', 'timeseries_wes_mut_single')]
-timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines=rownames(timeseries_samples[timeseries_samples$timeseries_wes_mut_single == 'TP092', ]), features=c('A1CF', 'ABCB6')) 
+timeseries_cells <- rownames(timeseries_samples[timeseries_samples$timeseries_wes_mut_single == 'TP092', ])
+timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='and', cell.lines=timeseries_cells, features=c('ABCB5', 'ABCB6')) 
 timeseries_summary@assays@data$exprs
