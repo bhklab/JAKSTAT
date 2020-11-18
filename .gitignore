@@ -4,3 +4,4 @@ Data
 *.RData
 *.csv
 .Rhistory
+*.txt

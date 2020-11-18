@@ -5,7 +5,7 @@ library(dplyr)
 library(stringr)
 
 # import all the functions used in the script
-source(file='functions.R')
+source(file='functions_molecular_data.R')
 
 ##################################
 ##### Prep: Read in all data #####
@@ -155,8 +155,3 @@ PSet <- PharmacoGx::PharmacoSet(
 PSet@annotation$version <- 1	
 
 saveRDS(PSet, file="TPLL_PSet.RDS")
-
-
-# load('./Data/drug_screen_processed/201810_p1383/p1383_response data.Rdata')
-# drug_meta <- read.csv('./Data/drug_screen_processed/201810_p1383/p1383_drug_metadata.csv')
-# patient_meta <- read.csv('./Data/drug_screen_processed/201810_p1383/p1383_patient_metadata.csv')
