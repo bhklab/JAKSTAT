@@ -5,6 +5,7 @@ library(plotly)
 ##### Using PSet ########
 #########################
 
+# load PSet
 PSet <- readRDS('TPLL_PSet.RDS')
 
 # 1. get summary of molecular profiles:
@@ -36,7 +37,7 @@ timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', s
 TP092_timeseries_summary <- timeseries_summary@assays@data$exprs
 
 # 4. Drug Sensitivity Data Summary
-# to summmarize drug sensitivity data
+# summmarize drug sensitivity data
 drugs <- PSet@drug
 sens_info <- PSet@sensitivity$info
 sens_profile <- PSet@sensitivity$profiles
@@ -46,7 +47,7 @@ drug_sens_summary_aac <- summarizeSensitivityProfiles(PSet, cell.lines=unique(se
 aac_p1332 <- drug_sens_summary_aac[,'p1332']
 aac_p1332 <- sort(aac_p1332, decreasing=TRUE)
 
-# create a barplot using the subsetted data.
+# create a barplot using the subset data.
 table <- data.frame(drugs=names(aac_p1332), aac=(aac_p1332))
 table$drugs <- factor(table$drugs, levels=names(aac_p1332))
 
