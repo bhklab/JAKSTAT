@@ -1,4 +1,5 @@
 library(PharmacoGx)
+library(plotly)
 
 #########################
 ##### Using PSet ########
@@ -23,9 +24,6 @@ gep_summary <- summarizeMolecularProfiles(PSet, mData='rnaseq', cell.lines = 'TP
 gep_summary@assays@data$exprs # displays the summary
 
 # for SNP, WES and WGS mutation data, 'features' parameter accepts gene names
-snp_summary <- summarizeMolecularProfiles(PSet, mData='snp', summary.stat='and', cell.lines='TP047', features='ZXDB')
-snp_summary@assays@data$exprs
-
 wes_single_summary <- summarizeMolecularProfiles(PSet, mDataType='mut_wes_single', summary.stat='or', cell.lines=c('TP014'), features=c('A1CF', 'ABCB6'))
 wes_single_summary@assays@data$exprs
 
@@ -34,5 +32,37 @@ wes_single_summary@assays@data$exprs
 samples <- data.frame(PSet@molecularProfiles$mut_wes_single@colData)
 timeseries_samples <- samples[!is.na(samples$timeseries_wes_mut_single), c('cellid', 'timeseries_wes_mut_single')]
 timeseries_cells <- rownames(timeseries_samples[timeseries_samples$timeseries_wes_mut_single == 'TP092', ])
-timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='and', cell.lines=timeseries_cells, features=c('ABCB5', 'ABCB6'))
-timeseries_summary@assays@data$exprs
+timeseries_summary <- summarizeMolecularProfiles(PSet, mData='mut_wes_single', summary.stat='or', cell.lines=timeseries_cells, features=c('ABCB5', 'ABCB6'))
+TP092_timeseries_summary <- timeseries_summary@assays@data$exprs
+
+# 4. Drug Sensitivity Data Summary
+# to summmarize drug sensitivity data
+drugs <- PSet@drug
+sens_info <- PSet@sensitivity$info
+sens_profile <- PSet@sensitivity$profiles
+drug_sens_summary_aac <- summarizeSensitivityProfiles(PSet, cell.lines=unique(sens_info$cellid), sensitivity.measure="aac_recomputed")
+
+# visualization of AAC in sample p1332, treated with different drugs
+aac_p1332 <- drug_sens_summary_aac[,'p1332']
+aac_p1332 <- sort(aac_p1332, decreasing=TRUE)
+
+# create a barplot using the subsetted data.
+table <- data.frame(drugs=names(aac_p1332), aac=(aac_p1332))
+table$drugs <- factor(table$drugs, levels=names(aac_p1332))
+
+fig <- plot_ly(
+  data=table,
+  x = ~drugs,
+  y = ~aac,
+  name = "AAC p1332",
+  type = "bar"
+)
+
+fig <- fig %>% layout(
+  title='AAC p1332',
+  xaxis=list(title='Drugs'), 
+  yaxis=list(title='AAC')
+)
+
+fig # displays the figure.
+
