@@ -12,4 +12,3 @@ sensitivity_info <- get_sensitivity_info(raw.sensitivity)
 ##### Create sensitivity_profile #####
 sensitivity_profile <- data.frame(matrix(data=NA, ncol=7, nrow=0))
 colnames(sensitivity_profile) <- c('aac_recomputed', 'ic50_recomputed', 'ic50_published', 'meanviability_published', 'HS', 'E_inf', 'EC50')
-
