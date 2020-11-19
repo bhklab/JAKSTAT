@@ -50,3 +50,30 @@ get_sensitivity_info <- function(raw.sensitivity) {
   }
   return(sensitivity_info)
 }
+
+get_sensitivity_profile <- function(raw.sensitivity) {
+  sensitivity_profile <- data.frame(matrix(data=NA, ncol=7, nrow=0))
+  colnames(sensitivity_profile) <- c(
+    'aac_recomputed', 
+    'ic50_recomputed', 
+    'ic50_published', 
+    'meanviability_published', 
+    'HS', 
+    'E_inf', 
+    'EC50'
+  )
+  calculated_profiles <- PharmacoGx:::.calculateFromRaw(raw.sensitivity)
+  
+  for(row in rownames(raw.sensitivity[,,'Dose'])){
+    sensitivity_profile[row, ] <- c(
+      calculated_profiles$AUC[row], 
+      calculated_profiles$IC50[row],
+      NA,
+      NA,
+      calculated_profiles$pars[[row]]$HS,
+      calculated_profiles$pars[[row]]$E_inf,
+      calculated_profiles$pars[[row]]$EC50
+    )
+  }
+  return(sensitivity_profile)
+}
