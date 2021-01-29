@@ -8,3 +8,4 @@ examples
 *.txt
 *.png
 .DS_Store
+Data/.DS_Store
