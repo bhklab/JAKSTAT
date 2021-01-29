@@ -27,7 +27,8 @@ wes_mut_single_followup <- read_and_format_data("./Data/WES_mutations_5_patients
 
 # for gene expression profiles, average out the gene expression values of duplicated ensembl id, and set ensembl gene id as rown name.
 gep <- gep[!is.na(gep$Ensembl_ID),] # remove rows where Ensembl_ID is NA
-gep_avg <- get_avg_gep(gep)
+# gep_avg <- get_avg_gep(gep)
+gep_avg <- readRDS('./Data/gep_avg.rds')
 
 # remove unnecessary columns and assign gene names as row names for SNP, WES and WGS data.
 
@@ -67,7 +68,10 @@ wgs_mut <- order_dataframes(wgs_mut)
 #######################################
 
 ##### 1. Parse the drug screen data into raw.sensitivity array #####
-raw.sensitivity <- get_raw_sensitivity('./Data/drug_screen/', c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5', 'Dose6', 'Dose7'))
+raw.sensitivity <- get_raw_sensitivity(
+  './Data/drug_screen/', 
+  c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5', 'Dose6', 'Dose7'), 
+  './Data/p-numbers/p_number_drug_sensitivity.csv')
 
 ##### 2. Create sensitivity_info #####
 sensitivity_info <- get_sensitivity_info(raw.sensitivity)
@@ -82,7 +86,14 @@ sensitivity_profile <- get_sensitivity_profile(raw.sensitivity)
 
 # NOTE: Each "cell" represents each sample
 # Concatenate all sample names from molecular profiles + drug sensitivity data into one vector
-total_samples <- unique(c(colnames(gep_avg), colnames(snp), colnames(wes_mut_paired), colnames(wes_mut_single_merged), colnames(wgs_mut), unique(sensitivity_info$cellid)))
+total_samples <- unique(c(
+  colnames(gep_avg), 
+  colnames(snp), 
+  colnames(wes_mut_paired), 
+  colnames(wes_mut_single_merged), 
+  colnames(wgs_mut), 
+  unique(sensitivity_info$cellid))
+)
 total_samples <- sort(total_samples)
 
 # create data.frame with unique sample names
@@ -101,7 +112,7 @@ rownames(curationTissue) <- curationCell$unique.cellid
 
 ##### Create Cell data.frame #####
 # rownames must be unique sample names. All samples names from molecular profiles + drug sensitivity data must be included here.
-# this is the reference dataframe used to dictate which smaples are included in the PSet. Any data samples that are not in this data frame will be removed.
+# this is the reference dataframe used to dictate which samples are included in the PSet. Any data samples that are not in this data frame will be removed.
 cell <- data.frame(matrix(ncol=0, nrow=(length(total_samples)))) #ncol depends on number of sample features to include.
 cell$cellid <- curationCell$unique.cellid
 cell$tissueid <- curationTissue$unique.tissueid
@@ -127,7 +138,13 @@ clinical_data <- read_and_format_clinical_data(
   path = "./Data/clinical_data_2020_10_23.csv", 
   all_samples = rownames(cell),
   data_colnames = list(colnames(snp), colnames(wes_mut_single_merged)), 
-  col_names = c('timeseries_snp', 'timeseries_wes_mut_single'))
+  col_names = c(
+    'timeseries_snp', 
+    'timeseries_wes_mut_single'
+  )
+)
+
+clinical_data <- add_p_numbers_to_clinical_data(clinical_data, './Data/p-numbers/')
 
 ##### 2 Create Gene Expression Data SummarizedExperiment #####
 TPLL_GEP <- get_summarized_experiment(gep_avg, clinical_data, features_gene, 'gene_id', 'rnaseq')

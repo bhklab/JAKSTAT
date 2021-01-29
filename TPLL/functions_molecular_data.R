@@ -97,6 +97,7 @@ read_and_format_clinical_data <- function(path, all_samples, data_colnames, col_
   
   # add time series columns and populate the cell with timeseries sample names if they exist
   clinical_data[,col_names] <- NA
+  
   timeseries_samples <- unique(rownames(clinical_data)[grepl('^TP\\d{3}.', rownames(clinical_data))])
   for(sample in timeseries_samples){
     for(i in 1:length(data_colnames)){
@@ -106,9 +107,44 @@ read_and_format_clinical_data <- function(path, all_samples, data_colnames, col_
       }
     }
   }
-  # make ure that the clinical_data is ordered alphabetically
+  
+  # make sure that the clinical_data is ordered alphabetically
   clinical_data <- clinical_data[order(rownames(clinical_data)), ]
   return(clinical_data)
+}
+
+add_p_numbers_to_clinical_data <- function(clinical_data, p_number_dir){
+  col_names <- c(
+    'p_number_gep', 
+    'p_number_miRNA', 
+    'p_number_mRNASeq', 
+    'p_number_snp', 
+    'p_number_wes_paired',
+    'p_number_wes_single',
+    'p_number_wes_single_followup',
+    'p_number_wgs'
+  )
+  clinical_data[, col_names] <- NA
+  clin_rows <- rownames(clinical_data)
+  
+  for(col_name in col_names){
+    annotation <- read.csv(paste0(p_number_dir, col_name, '.csv'))
+    row_names <- annotation$TP_number
+    row_names <- str_replace(row_names, '^TP\\d{3}_', format_clinical_rowname)
+    rownames(annotation) <- row_names
+    annotation_rows <- rownames(annotation)
+    for(clin_row_name in clin_rows){
+      if(clin_row_name %in% annotation_rows){
+        clinical_data[clin_row_name, col_name] <- if(annotation[clin_row_name, 'p_number'] != '') annotation[clin_row_name, 'p_number'] else NA
+      }
+    }
+  }
+  
+  return(clinical_data)
+}
+
+format_clinical_rowname <- function(match){
+  return(str_replace(match, '_', '.'))
 }
 
 get_gene_info <- function(genes, data){

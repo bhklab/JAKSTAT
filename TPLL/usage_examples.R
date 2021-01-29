@@ -60,7 +60,7 @@ sens_profile <- PSet@sensitivity$profiles
 drug_sens_summary_ic50 <- summarizeSensitivityProfiles(PSet, cell.lines=unique(sens_info$cellid), sensitivity.measure="ic50_recomputed")
 
 # dose response curve
-PharmacoGx::drugDoseResponseCurve('Dinaciclib', 'p1332', list(PSet), plot.type = c("Both"))
+PharmacoGx::drugDoseResponseCurve('Dinaciclib', 'TP111', list(PSet), plot.type = c("Both"))
 
 
 
