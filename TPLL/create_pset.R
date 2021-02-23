@@ -19,6 +19,8 @@ source(file='functions_drug_screen.R') # functions used to process drug sensitiv
 load("./Data/Ensembl.v75.annotation.RData") #for hg17 (Ensembl v75)
 
 gep <- read_and_format_data("./Data/GEP_matrix_69_TPLL_vs_10_healthy_CD3_pan_T.csv")
+rnaseq <- read_and_format_data("./Data/RNA_sequencing_FPKM_values_48_TPLL_and_2_FU_samples_vs_6_healthy_CD3_pan_T.csv")
+sm_rnaseq <- read_and_format_data("./Data/small_RNA_sequencing_CPM_values_46_TPLL_vs_6_healthy_CD3_pan_T.csv")
 snp <- read_and_format_data("./Data/sCNA_of_82_TPLL_and_6_FU_samples.csv")
 wgs_mut <- read_and_format_data("./Data/WGS_mutations_3_TPLL_tg_pairs.csv")
 wes_mut_paired <- read_and_format_data("./Data/WES_mutations_17_TPLL_tg_pairs.csv")
@@ -31,6 +33,14 @@ gep <- gep[!is.na(gep$Ensembl_ID),] # remove rows where Ensembl_ID is NA
 gep_avg <- readRDS('./Data/gep_avg.rds')
 
 # remove unnecessary columns and assign gene names as row names for SNP, WES and WGS data.
+
+# RNA Seq
+rownames(rnaseq) <- rnaseq$...1
+rnaseq <- rnaseq[-c(1:5)]
+
+# Sm-RNA Seq
+rownames(sm_rnaseq) <- sm_rnaseq$...1
+sm_rnaseq <- sm_rnaseq[-c(1:9)]
 
 # SNP
 rownames(snp) <- snp[,1] # change row names to gene names.
@@ -55,12 +65,71 @@ wes_mut_single_merged <- merge_mut_dataframes(wes_mut_single, wes_mut_single_fol
 rownames(wgs_mut) <- wgs_mut$gene
 wgs_mut <- wgs_mut[-c(1)]
 
+# replace patient colnames with patient sample ids
+gep_avg <- assign_p_number(gep_avg, 'gep')
+rnaseq <- assign_p_number(rnaseq, 'mRNAseq')
+sm_rnaseq <- assign_p_number(sm_rnaseq, 'miRNA')
+snp <- assign_p_number(snp, 'snp')
+wes_mut_paired <- assign_p_number(wes_mut_paired, 'wes_paired')
+wes_mut_single_merged <- assign_p_number(wes_mut_single_merged, 'wes_single')
+wgs_mut <- assign_p_number(wgs_mut, 'wgs')
+
 # Order the samples by column name
-gep_avg <- order_dataframes(gep_avg)
-snp <- order_dataframes(snp)
-wes_mut_paired <- order_dataframes(wes_mut_paired)
-wes_mut_single_merged <- order_dataframes(wes_mut_single_merged)
-wgs_mut <- order_dataframes(wgs_mut)
+gep_avg <- gep_avg[,order(colnames(gep_avg))]
+rnaseq <- rnaseq[,order(colnames(rnaseq))]
+sm_rnaseq <- sm_rnaseq[,order(colnames(sm_rnaseq))]
+snp <- snp[,order(colnames(snp))]
+wes_mut_paired <- wes_mut_paired[,order(colnames(wes_mut_paired))]
+wes_mut_single_merged <- wes_mut_single_merged[,order(colnames(wes_mut_single_merged))]
+wgs_mut <- wgs_mut[,order(colnames(wgs_mut))]
+
+# Prepare clinical_sample dataframe to be used as colData in each molecular profile SummarizedExperiment
+# Concatenate all sample names from molecular profiles + drug sensitivity data into one vector
+total_samples <- unique(c(
+  colnames(gep_avg), 
+  colnames(rnaseq),
+  colnames(sm_rnaseq),
+  colnames(snp), 
+  colnames(wes_mut_paired), 
+  colnames(wes_mut_single_merged), 
+  colnames(wgs_mut)
+))
+total_samples <- sort(total_samples)
+
+clinical_sample_data <- get_clinical_sample_data(
+  total_samples, 
+  './Data/clinical_data_sample_based_2020_12_07.csv', 
+  paste0('./Data/p-numbers/p_number_', 'wes_single', '_followup', '.csv')
+)
+
+################################################################
+##### CREATE SummarizedExperiments FOR MOLECULAR PROFILES ######
+################################################################
+
+# Create Gene Expression Data SummarizedExperiment
+TPLL_GEP <- get_summarized_experiment(gep_avg, clinical_sample_data, features_gene, 'gene_id', 'rnaseq')
+
+# Create mRNASeq data SummarizedExperiment
+TPLL_mRNA <- get_summarized_experiment(rnaseq, clinical_sample_data, features_gene, 'gene_id', 'rnaseq')
+
+# Create miRNASeq data SummarizedExperiment
+TPLL_miRNA <- get_summarized_experiment(sm_rnaseq, clinical_sample_data, features_gene, 'gene_id', 'rnaseq')
+
+# Create SNP Data SummarizedExperiment
+TPLL_SNP <- get_summarized_experiment(snp, clinical_sample_data, features_gene, 'gene_name', 'mutation')
+
+# Create WGS (Whole Genome Sequencing) mutation data SummarizedExperiment
+wgs_mut[wgs_mut == 'unmutated'] <- 'wt'
+TPLL_WGS_MUT <- get_summarized_experiment(wgs_mut, clinical_sample_data, features_gene, 'gene_name', 'mutation')
+
+# Create WES (Whole Exome Sequencing) single-end and paired-end mutation data SummarizedExperiments
+### Single-end Mutation Data ###
+wes_mut_single_merged[wes_mut_single_merged == 'unmutated'] <- 'wt'
+TPLL_WES_MUT_SINGLE <- get_summarized_experiment(wes_mut_single_merged, clinical_sample_data, features_gene, 'gene_name', 'mutation')
+
+# Paied-end Mutation Data
+wes_mut_paired[wes_mut_paired == 'unmutated'] <- 'wt'
+TPLL_WES_MUT_PAIRED <- get_summarized_experiment(wes_mut_paired, clinical_sample_data, features_gene, 'gene_name', 'mutation')
 
 
 #######################################
@@ -84,14 +153,10 @@ sensitivity_profile <- get_sensitivity_profile(raw.sensitivity)
 ##### CREATE CURATION DATAFRAMES ######
 #######################################
 
-# NOTE: Each "cell" represents each sample
-# Concatenate all sample names from molecular profiles + drug sensitivity data into one vector
+# NOTE: Each "cell" represents each patient
+# Concatenate all patient(TP) numbers from molecular profiles + drug sensitivity data into one vector
 total_samples <- unique(c(
-  colnames(gep_avg), 
-  colnames(snp), 
-  colnames(wes_mut_paired), 
-  colnames(wes_mut_single_merged), 
-  colnames(wgs_mut), 
+  unique(clinical_sample_data$cellid),
   unique(sensitivity_info$cellid))
 )
 total_samples <- sort(total_samples)
@@ -119,6 +184,25 @@ cell$tissueid <- curationTissue$unique.tissueid
 cell$tissue_type <- curationTissue$tissue_type
 rownames(cell) <- curationCell$unique.cellid
 
+# Prepare the patient_data dataframe to be added to cells
+patient_data <- read.csv("./Data/clinical_data_2020_10_23.csv") 
+rownames(patient_data) <- patient_data[,1]
+patient_data <- patient_data[-c(1)]
+patient_data <- data.frame(t(patient_data)) # transpose patient_data with patient id as rows and attirbutes as columns.
+
+# add any missing samples (patients and healthy individuals) into patient_data and populate the columns with NA
+# this is done to ensure that all the samples in each SummarizedExperiment are included and not ommitted.
+patient_missing <- total_samples[!total_samples %in% rownames(patient_data)]
+patient_data[patient_missing,] <- NA
+
+# make sure that the patient_data is ordered alphabetically by rowname
+patient_data <- patient_data[order(rownames(patient_data)), ]
+
+# add clinical data to cell dataframe
+for (col in colnames(patient_data)){
+  cell[, col] <- patient_data[, col][match(row.names(cell), row.names(patient_data))]
+}
+
 ##### Create curationDrug data.frame #####
 curationDrug <- data.frame(matrix(ncol=0, nrow=(length(unique(sensitivity_info$drugid)))))
 curationDrug$unique.drugid <- sort(unique(sensitivity_info$drugid))
@@ -129,42 +213,6 @@ drug <- data.frame(matrix(ncol=0, nrow=(length(unique(sensitivity_info$drugid)))
 drug$drugid <- curationDrug$unique.drugid
 rownames(drug) <- curationDrug$unique.drugid
 
-################################################################
-##### CREATE SummarizedExperiments FOR MOLECULAR PROFILES ######
-################################################################
-
-##### 1 Prepare the clinical_data data frame to be used as colData in each SummarizedExperiment object #####
-clinical_data <- read_and_format_clinical_data(
-  path = "./Data/clinical_data_2020_10_23.csv", 
-  all_samples = rownames(cell),
-  data_colnames = list(colnames(snp), colnames(wes_mut_single_merged)), 
-  col_names = c(
-    'timeseries_snp', 
-    'timeseries_wes_mut_single'
-  )
-)
-
-clinical_data <- add_p_numbers_to_clinical_data(clinical_data, './Data/p-numbers/')
-
-##### 2 Create Gene Expression Data SummarizedExperiment #####
-TPLL_GEP <- get_summarized_experiment(gep_avg, clinical_data, features_gene, 'gene_id', 'rnaseq')
-
-##### 3 Create SNP Data SummarizedExperiment #####
-TPLL_SNP <- get_summarized_experiment(snp, clinical_data, features_gene, 'gene_name', 'mutation')
-
-##### 4 Create WGS (Whole Genome Sequencing) mutation data SummarizedExperiment #####
-wgs_mut[wgs_mut == 'unmutated'] <- 'wt'
-TPLL_WGS_MUT <- get_summarized_experiment(wgs_mut, clinical_data, features_gene, 'gene_name', 'mutation')
-
-##### 5 Create WES (Whole Exome Sequencing) single-end and paired-end mutation data SummarizedExperiments#####
-### Single-end Mutation Data ###
-wes_mut_single_merged[wes_mut_single_merged == 'unmutated'] <- 'wt'
-TPLL_WES_MUT_SINGLE <- get_summarized_experiment(wes_mut_single_merged, clinical_data, features_gene, 'gene_name', 'mutation')
-
-##### 6 Paied-end Mutation Data #####
-wes_mut_paired[wes_mut_paired == 'unmutated'] <- 'wt'
-TPLL_WES_MUT_PAIRED <- get_summarized_experiment(wes_mut_paired, clinical_data, features_gene, 'gene_name', 'mutation')
-
 
 #######################
 ##### CREATE PSET #####
@@ -172,7 +220,9 @@ TPLL_WES_MUT_PAIRED <- get_summarized_experiment(wes_mut_paired, clinical_data, 
 
 PSet <- PharmacoGx::PharmacoSet(
   molecularProfiles=list(
-    "rnaseq"=TPLL_GEP, 
+    "gep"=TPLL_GEP, 
+    "rnaseq"=TPLL_mRNA,
+    "mi_rnaseq"=TPLL_miRNA,
     "snp"=TPLL_SNP,
     "mut_wes_single"=TPLL_WES_MUT_SINGLE, 
     "mut_wes_paired"=TPLL_WES_MUT_PAIRED,

@@ -77,42 +77,6 @@ merge_mut_dataframes <- function(df1, df2){
   return(merged)
 }
 
-order_dataframes <- function(df){
-  return(df[,order(colnames(df))])
-}
-
-read_and_format_clinical_data <- function(path, all_samples, data_colnames, col_names){
-  clinical_data <- read.csv(path) 
-  rownames(clinical_data) <- clinical_data[,1]
-  clinical_data <- clinical_data[-c(1)]
-  clinical_data <- data.frame(t(clinical_data)) # transpose clinical_data patient id as rows and attirbutes as columns.
-  
-  # add any missing samples (patients and healthy individuals) into clinical_data and populate the columns with NA
-  # this is done to ensure that all the samples in each SummarizedExperiment are included and not ommitted.
-  clinical_missing <- all_samples[!all_samples %in% rownames(clinical_data)]
-  clinical_data[clinical_missing,] <- NA
-  
-  # add cellid column, and populate it with rownames for SummarizedExeriment object to be created.
-  clinical_data[, 'cellid'] <- rownames(clinical_data)
-  
-  # add time series columns and populate the cell with timeseries sample names if they exist
-  clinical_data[,col_names] <- NA
-  
-  timeseries_samples <- unique(rownames(clinical_data)[grepl('^TP\\d{3}.', rownames(clinical_data))])
-  for(sample in timeseries_samples){
-    for(i in 1:length(data_colnames)){
-      timeseries <- grep(sample, data_colnames[[i]], value=TRUE)
-      if(length(timeseries)){
-        clinical_data[sample, col_names[i]] <- substring(timeseries, first=1, last=5)
-      }
-    }
-  }
-  
-  # make sure that the clinical_data is ordered alphabetically
-  clinical_data <- clinical_data[order(rownames(clinical_data)), ]
-  return(clinical_data)
-}
-
 add_p_numbers_to_clinical_data <- function(clinical_data, p_number_dir){
   col_names <- c(
     'p_number_gep', 
@@ -143,6 +107,85 @@ add_p_numbers_to_clinical_data <- function(clinical_data, p_number_dir){
   return(clinical_data)
 }
 
+assign_p_number <- function(mol_data, datatype) {
+  annotation <- NULL
+  if(datatype == 'wes_single'){
+    # merge wes and wes_followup annotations
+    annotation <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '.csv'))
+    followup <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '_followup', '.csv'))
+    
+    # format time series TP number to "TP###.t#
+    followup$TP_number <- str_replace(followup$TP_number, '^TP\\d{3}_', format_clinical_rowname)
+    
+    annotation <- bind_rows(annotation, followup)
+  }else{
+    annotation <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '.csv'))
+  }
+  
+  # if no p-number is assigned, assign the TP number. This is the case for control samples.
+  for(i in rownames(annotation)){
+    if(annotation[i, 'p_number'] == ''){
+      annotation[i, 'p_number'] = annotation[i, 'TP_number']
+    }
+  }
+  
+  # find any TP numbers that does not exist in the annotation dataframe, and add them
+  difference <- setdiff(colnames(mol_data), annotation$TP_number)
+  if(length(difference) > 0){
+    for(n in difference){
+      annotation <- rbind(annotation, c(n, n))
+    }
+  }
+  
+  # note
+  # 1. wes_mut_single_merged: TP029 found in the dataframe, but not in the annotation.
+  # 2. wes_mut_single_merged: TP079 found in the annotation, but not in the dataframe.
+  # 3. snp: timeseries data found in the dataframe but not in the annotation.
+  # 4. snp: TP092, TP093, TP094, TP095 and TP096 found in the annotation but not in th dataframe.
+  
+  names(mol_data) <- annotation$p_number[match(names(mol_data), annotation$TP_number)]
+
+  return(mol_data)
+}
+
+get_clinical_sample_data <- function(total_samples, filepath, timeseries_filepath){
+  clinical_samples <- read.csv(filepath)
+  row.names(clinical_samples) <- clinical_samples$p_number
+  colnames(clinical_samples)[2] <- "cellid"
+  clinical_samples <- add_column(clinical_samples, time_series = NA, .after="cellid")
+  
+  # add time series designation
+  followup <- read.csv(timeseries_filepath)
+  followup$TP_number <- str_replace(followup$TP_number, '^TP\\d{3}_', format_clinical_rowname)
+  rownames(followup) <- followup$p_number
+  for(pnum in followup$p_number){
+    clinical_samples[pnum, 'time_series'] <- str_split(followup[pnum, 'TP_number'], '\\.')[[1]][2]
+  }
+  
+  # add missing sample rows (control samples) to clinical_samples to ensure that all the samples are curated.
+  additional <- setdiff(total_samples, rownames(clinical_samples))
+  
+  df <- data.frame(matrix(data=NA, ncol=ncol(clinical_samples), nrow=length(additional)))
+  colnames(df) <- colnames(clinical_samples)
+  rownames(df) <- additional
+  
+  for(n in additional){
+    df[n, 'p_number'] <- n
+    if(length(grep('^TP\\d{3}.t\\d{1}', n)) > 0){
+      split <- str_split(n, "\\.")
+      df[n, 'cellid'] <- split[[1]][1]
+      df[n, 'time_series'] <- split[[1]][2]
+    }else{
+      df[n, 'cellid'] <- n
+    }
+  }
+  
+  clinical_samples <- rbind(clinical_samples, df)
+  clinical_samples <- clinical_samples[order(rownames(clinical_samples)), ]
+  
+  return(clinical_samples)
+}
+
 format_clinical_rowname <- function(match){
   return(str_replace(match, '_', '.'))
 }
@@ -158,12 +201,8 @@ get_gene_names <- function(genes, data){
   return(gene_names %>% group_by(gene_name) %>% summarize(Ensembl_ID=sapply(list(gene_id), paste, collapse=","))) 
 }
 
-get_filtered_clinical_data <- function(clinical_data, data){
-  return(clinical_data[row.names(clinical_data) %in% colnames(data), ])
-}
-
-get_summarized_experiment <- function(data, clinical_data, genes, gene_column_name, annotation) {
-  filtered_clinical_data <- get_filtered_clinical_data(clinical_data, data)
+get_summarized_experiment <- function(data, clinical_sample_data, genes, gene_column_name, annotation) {
+  filtered_clinical_sample_data <- clinical_sample_data[row.names(clinical_sample_data) %in% colnames(data), ]
   
   if(gene_column_name == 'gene_id'){
     filtered_gene_info <- get_gene_info(genes, data)
@@ -178,7 +217,7 @@ get_summarized_experiment <- function(data, clinical_data, genes, gene_column_na
   Sum_Exp <- SummarizedExperiment(
     assays=list(exprs=as.matrix(filtered_data)), #gene expression data in matrix
     rowData=filtered_gene_info, #gene features Data
-    colData=filtered_clinical_data) #patient/sample info
+    colData=filtered_clinical_sample_data) #patient/sample info
   
   Sum_Exp@metadata$annotation <- annotation
   return(Sum_Exp)

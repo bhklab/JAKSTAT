@@ -28,7 +28,6 @@ get_raw_sensitivity <- function(root_dir, colNames, p_number_file){
   # order data by row names
   raw.sensitivity <- raw.sensitivity[order(rownames(raw.sensitivity)),]
   
-  
   # Make the merged dataframe into an array
   raw.sensitivity <- array(
     c(
