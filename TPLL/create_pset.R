@@ -29,8 +29,8 @@ wes_mut_single_followup <- read_and_format_data("./Data/WES_mutations_5_patients
 
 # for gene expression profiles, average out the gene expression values of duplicated ensembl id, and set ensembl gene id as rown name.
 gep <- gep[!is.na(gep$Ensembl_ID),] # remove rows where Ensembl_ID is NA
-# gep_avg <- get_avg_gep(gep)
-gep_avg <- readRDS('./Data/gep_avg.rds')
+gep_avg <- get_avg_gep(gep)
+# gep_avg <- readRDS('./Data/gep_avg.rds')
 
 # remove unnecessary columns and assign gene names as row names for SNP, WES and WGS data.
 
@@ -241,4 +241,4 @@ PSet <- PharmacoGx::PharmacoSet(
 
 PSet@annotation$version <- 1	
 
-saveRDS(PSet, file="TPLL_PSet.RDS")
+saveRDS(PSet, file="./PSet/TPLL_PSet.RDS")

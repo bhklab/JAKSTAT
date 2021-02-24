@@ -11,11 +11,17 @@ PSet <- readRDS('TPLL_PSet.RDS')
 # 1. get summary of molecular profiles:
 molecularProfiles  <- PSet@molecularProfiles
 
+# To access sample data for each molecular profile:
+gep_samples <- data.frame(molecularProfiles[["gep"]]@colData) # replace "gep" with other molecular data types
+
+# To access patient data:
+patient <- PSet@cell
+
 # 2. get summary of each molecular profile:
 ## for GEP
 summarizeMolecularProfiles(PSet, mData='gep')
 
-## for SNP, WES and WGS mutation data (change 'mData' parameter to corresponding profile name)
+## For SNP, WES and WGS mutation data (change 'mData' parameter to corresponding profile name)
 summarizeMolecularProfiles(PSet, mData='mut_wgs', summary.stat='and')
 
 # 3. summary of a molecular profile with a specific sample and  specific gene
@@ -33,7 +39,7 @@ gep_summary <- summarizeMolecularProfiles(
 
 gep_summary@assays@data$exprs # displays the summary
 
-# for SNP, WES and WGS mutation data, 'features' parameter accepts gene names
+# For SNP, WES and WGS mutation data, 'features' parameter accepts gene names
 wes_single_summary <- summarizeMolecularProfiles(
   PSet, 
   mDataType='mut_wes_single', 
@@ -44,7 +50,7 @@ wes_single_summary <- summarizeMolecularProfiles(
 
 wes_single_summary@assays@data$exprs
 
-# to summarize the time series data,
+# To summarize the time series data,
 
 # 1. obtain samples that are in the time series
 wes_mut_single_samples <- data.frame(molecularProfiles[["mut_wes_single"]]@colData)
@@ -57,7 +63,7 @@ timeseries_rows <- rownames(timeseries_samples[timeseries_samples$cellid == 'TP0
 wes_single <- wes_single[, timeseries_rows]
 wes_single <- wes_single[rowSums(is.na(wes_single)) != ncol(wes_single), ]
 
-# 4. Drug Sensitivity Data Summary
+# 3. Drug Sensitivity Data Summary
 # summmarize drug sensitivity data
 drugs <- PSet@drug
 

@@ -1,9 +1,7 @@
 ### functions used for processing TPLL molecular data ###
 
 ###load packages##
-# library(SummarizedExperiment)
-# library(dplyr)
-# library(stringr)
+library('tibble')
 
 ##### Functions #####
 read_and_format_data <- function(path){
