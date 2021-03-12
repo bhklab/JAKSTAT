@@ -60,6 +60,7 @@ wes_mut_single_followup <- wes_mut_single_followup[-c(1)]
 
 # merge wes_mut_single and wes_mut_single_followup (timeseries data for wes_mut_single)
 wes_mut_single_merged <- merge_mut_dataframes(wes_mut_single, wes_mut_single_followup)
+wes_mut_single_merged <- wes_mut_single_merged %>% rename(TP079 = TP029)
 
 # WGS Mutation 
 rownames(wgs_mut) <- wgs_mut$gene
