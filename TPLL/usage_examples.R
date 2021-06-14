@@ -1,9 +1,7 @@
 library(PharmacoGx)
 library(plotly)
 
-#########################
 ##### Using PSet ########
-#########################
 
 # load PSet
 PSet <- readRDS('./PSet/TPLL_PSet.RDS')
