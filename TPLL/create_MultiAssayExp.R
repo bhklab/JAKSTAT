@@ -104,7 +104,7 @@ clinical_sample_data <- get_clinical_sample_data(
   paste0('./Data/p-numbers/p_number_', 'wes_single', '_followup', '.csv')
 )
 
-# remove columns that are not publiclly shared
+# remove columns that are not publicly shared
 clinical_sample_data <- clinical_sample_data %>% select(p_number, cellid, time_series)
 
 ################################################################
