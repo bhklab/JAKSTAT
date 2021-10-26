@@ -5,11 +5,42 @@ library(readxl)
 library(stringr)
 library(ghql)
 library(jsonlite)
+library(PharmacoGx)
 
-tcl_cells <- data.frame(read.delim('./data/cells.txt'))
-tcl_cells$cell.lines <- gsub("[*]|[[:space:]+]", "", tcl_cells$cell.lines)
-pharmacodb_cells <- read.csv("./data/cells_pharmacodb.csv")
-filtered <- pharmacodb_cells[tolower(pharmacodb_cells$cell_name) %in% tolower(tcl_cells$cell.lines), ]
+tcl_cells <- data.frame(read.delim('cells.txt'))
+tcl_cells$Cell.line <- gsub("[*]|[[:space:]+]", "", tcl_cells$Cell.line)
+pharmacodb_cells <- read.csv("cells_pharmacodb.csv")
+filtered <- pharmacodb_cells[tolower(pharmacodb_cells$cell.name) %in% tolower(tcl_cells$Cell.line) | tolower(pharmacodb_cells$synonym) %in% tolower(tcl_cells$Cell.line), ]
+filtered$tcl.cell.name <- ""
+filtered$dataset.cell.name <- ""
+filtered <- filtered[, c("tcl.cell.name", "cell.name", "synonym", "dataset.cell.name", "dataset")]
+for(cell in tcl_cells$Cell.line){
+  filtered$tcl.cell.name[tolower(filtered$cell.name) == tolower(cell) | tolower(filtered$synonym) == tolower(cell)] <- cell
+}
+filtered$dataset.cell.name <- ifelse(filtered$synonym == "", filtered$cell.name, filtered$synonym)
+
+df_list <- split(filtered, f = filtered$dataset)
+
+available <- PharmacoGx::availablePSets()
+psets <- list()
+for(dataset in names(df_list)){
+  pset_name <- ""
+  if(str_detect(dataset, "GDSC")){
+    gdsc_ver <- regmatches(dataset, gregexpr("[[:digit:]]+", dataset))
+    available_versions <- available$version[available$`Dataset Name` == 'GDSC']
+    version <- grep(paste0("v", gdsc_ver), available_versions, value=TRUE)
+    print(paste0("GDSC ", version))
+    pset_name <- paste0("GDSC_", version)
+  }else{
+    print(dataset)
+    pset_name <- available$`PSet Name`[available$`Dataset Name` == dataset]
+  }
+  psets <- append(psets, pset_name)
+  PharmacoGx::downloadPSet(name=pset_name, saveDir="./data")
+}
+
+psets <- unlist(psets)
+
 cells <- unique(filtered$name)
 dir.create('./out')
 
@@ -29,18 +60,31 @@ query <- 'query getExperimentsQuery($cellLineName: String){
     dataset {
       name
     }
-    dose_response {
-      dose
-      response
-    }
-    profile {
-      AAC
-      IC50
-      EC50
-      Einf
-    }
   }
 }'
+
+# experiments(cellLineName: $cellLineName, all: true){
+#   id
+#   cell_line {
+#     name
+#   }
+#   compound {
+#     name
+#   }
+#   dataset {
+#     name
+#   }
+#   dose_response {
+#     dose
+#     response
+#   }
+#   profile {
+#     AAC
+#     IC50
+#     EC50
+#     Einf
+#   }
+# }
 
 for(cellLine in cells){
   variable <- list(cellLineName = cellLine)
