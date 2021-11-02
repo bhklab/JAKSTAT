@@ -96,3 +96,18 @@ merge_sensitivity_data <- function(sensitivity_data, dataset.name, sensitivity_t
   }
   return(total)
 }
+
+format_dose_col <- function(dose_colnames){
+  format <- function(colname) {
+    dose_num <- regmatches(colname, gregexpr("[[:digit:]]+", colname))
+    dose_type <- sub('.*\\.', '', colname)
+    return(paste0("dose", dose_num, ".", dose_type))
+  }
+  return(unlist(lapply(dose_colnames, format)))
+}
+
+get_curation_object <- function(data, col_names, id_name){
+  curationObj <- data[col_names]
+  colnames(curationObj)[which(names(curationObj) == id_name)] <- paste0("unique.", id_name)
+  return(curationObj)
+}

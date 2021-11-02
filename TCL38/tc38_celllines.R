@@ -92,7 +92,7 @@ molecular_prof_names <- unique(molecular_prof_names)
 molecular_profiles <- list()
 for(mol.prof in molecular_prof_names){
   se <- merge_molecular_profile(PSet_Subsets, mol.prof)
-  molecular_profiles[[mol.prof]] <- c(molecular_profiles[[mol.prof]], se)
+  molecular_profiles[mol.prof] <- se
 }
 
 ##### Merge drug sensitivity data #####
@@ -114,22 +114,53 @@ for(dataset.name in names(PSet_Subsets)){
   )
 }
 
+# Standardize the dose/viability col names
+dose_colnames_total <- c()
+for(dataset.name in names(PSet_Subsets)){
+  tmp <- data.frame(PSet_Subsets[[dataset.name]][[1]]@sensitivity[["raw"]])
+  dose_colnames_total <- c(dose_colnames_total, colnames(tmp))
+}
+dose_colnames_total <- format_dose_col(dose_colnames_total)
+dose_colnames_total <- unique(dose_colnames_total)
 
+doses <- dose_colnames_total[grepl(".Dose", dose_colnames_total)]
+doses <- str_sort(doses, numeric=TRUE)
+viabilities <- dose_colnames_total[grepl(".Viability", dose_colnames_total)]
+viabilities <- str_sort(viabilities, numeric=TRUE)
+dose_colnames_total <- c(doses, viabilities)
+
+# Merge raw sensitivity data
+sensitivity_raw_total <- data.frame(matrix(data=NA, ncol=length(dose_colnames_total), nrow=0))
+colnames(sensitivity_raw_total) <- dose_colnames_total
+for(dataset.name in names(PSet_Subsets)){
+  tmp <- data.frame(PSet_Subsets[[dataset.name]][[1]]@sensitivity[["raw"]])
+  rownames(tmp) <- paste0(rownames(tmp), "-", dataset.name)
+  colnames_tmp <- colnames(tmp)
+  colnames(tmp) <- format_dose_col(colnames_tmp)
+  tmp[setdiff(colnames(sensitivity_raw_total), colnames(tmp))] <- NA
+  sensitivity_raw_total <- dplyr::bind_rows(sensitivity_raw_total, tmp)
+}
+
+##### Create curation objects #####
+curationCell <- get_curation_object(pset_cell, c("cellid", "original.cellid", "dataset"), "cellid")
+curationDrug <- get_curation_object(pset_drug, c("drugid"), "drugid")
+curationTissue <- get_curation_object(pset_cell, c("tissueid"), "tissueid")
 
 ##### Create the meta PSet #####
 PSet <- PharmacoGx::PharmacoSet(
   molecularProfiles=molecular_profiles,
   name="TCL38_Meta",
-  cell=cell,
-  drug=drug,
-  sensitivityInfo=sensitivity_info,
-  sensitivityRaw=raw.sensitivity,
-  sensitivityProfiles=sensitivity_profile,
-  sensitivityN=as.numeric(length(colnames(raw.sensitivity[,,'Dose']))),
+  cell=pset_cell,
+  drug=pset_drug,
+  sensitivityInfo=sensitivity_info_total,
+  sensitivityRaw=sensitivity_raw_total,
+  sensitivityProfiles=sensitivity_profile_total,
+  sensitivityN=as.numeric(length(colnames(sensitivity_raw_total)[grepl(".Dose", colnames(sensitivity_raw_total))])),
   curationCell=curationCell,
   curationDrug=curationDrug,
   curationTissue=curationTissue,
-  datasetType=c("both"))
+  datasetType=c("both")
+)
 
 # # Access PhamracoDB's GraphQL API
 # link <- 'https://www.pharmacodb.ca/graphql'
