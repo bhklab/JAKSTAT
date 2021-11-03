@@ -2,6 +2,43 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
+get_slot_data <- function(pset_subsets, slot_type, isCuration=FALSE){
+  slot_colnames_list <- list()
+  slot_data_list <- list()
+  for(dataset.name in names(pset_subsets)){
+    slot_data <- if(isCuration) PSet_Subsets[[dataset.name]][[1]]@curation[[slot_type]] else attr(pset_subsets[[dataset.name]][[1]], slot_type)
+    if(isCuration & slot_type == "tissue"){
+      slot_data$cellid <- rownames(slot_data)
+    }
+    slot_colnames_list[[dataset.name]] <- colnames(slot_data)
+    slot_data_list[[dataset.name]] <- slot_data
+  }
+  common_colnames <- Reduce(intersect, slot_colnames_list)
+  common_data <- lapply(slot_data_list, function(x) x %>% select(all_of(common_colnames)))
+  slot_data_merged <- dplyr::bind_rows(common_data)
+  slot_data_merged <- dplyr::distinct(slot_data_merged)
+  
+  for(dataset.name in names(pset_subsets)){
+    tmp <- slot_data_list[[dataset.name]]
+    tmp <- tmp[names(tmp)[!names(tmp) %in% common_colnames]]
+    if(ncol(tmp) > 0){
+      colnames(tmp) <- paste0(colnames(tmp), ".", dataset.name)
+      slot_data_merged <- merge(slot_data_merged, tmp, by=0, all=TRUE)
+      slot_data_merged$Row.names = NULL
+      id_col_name <- if(isCuration) paste0("unique.", slot_type, "id") else paste0(slot_type, "id")
+      id_col_name <- paste0(slot_type, "id")
+      if(isCuration){
+        id_col_name <- if(slot_type == "tissue") "cellid" else paste0("unique.", slot_type, "id")
+      }
+      rownames(slot_data_merged) <- slot_data_merged[[id_col_name]]
+    }
+  }
+  if(isCuration & slot_type == "tissue"){
+    slot_data_merged$cellid = NULL
+  }
+  return(slot_data_merged)
+}
+
 get_pset_name <- function(dataset, available.psets){
   if(str_detect(dataset, "GDSC")){
     gdsc_ver <- regmatches(dataset, gregexpr("[[:digit:]]+", dataset))
@@ -32,8 +69,7 @@ merge_molecular_profile <- function(pset_subsets, mol_data_type){
       # parse col data
       coldata_tmp <- data.frame(mol_prof@colData)
       if(nrow(coldata_tmp) > 0){
-        coldata_tmp$cellid <- paste0(coldata_tmp$cellid, "-", dataset.name)
-        rownames(coldata_tmp) <- paste0(rownames(coldata_tmp), "-", dataset.name)
+        rownames(coldata_tmp) <- paste0(rownames(coldata_tmp), ".", dataset.name)
         coldata_tmp["dataset"] <- dataset.name
         if(nrow(coldata_total) == 0){ 
           coldata_total <- coldata_tmp # initialize coldata_total df.
@@ -57,7 +93,7 @@ merge_molecular_profile <- function(pset_subsets, mol_data_type){
     if(!is.null(mol_prof)){
       assay_tmp <- data.frame(mol_prof@assays@data@listData[["exprs"]])
       if(nrow(assay_tmp) > 0){
-        colnames(assay_tmp) <- paste0(colnames(assay_tmp), "-", dataset.name)
+        colnames(assay_tmp) <- paste0(colnames(assay_tmp), ".", dataset.name)
         empty_df <- data.frame(matrix(data=NA, ncol=ncol(assay_tmp), nrow=length(setdiff(rownames(rowdata_total), rownames(assay_tmp)))))
         colnames(empty_df) <- colnames(assay_tmp)
         rownames(empty_df) <- setdiff(rownames(rowdata_total), rownames(assay_tmp))
@@ -80,10 +116,7 @@ merge_molecular_profile <- function(pset_subsets, mol_data_type){
 merge_sensitivity_data <- function(sensitivity_data, dataset.name, sensitivity_total, datatype){
   total <- sensitivity_total
   tmp <- sensitivity_data
-  if(datatype == "info"){
-    tmp$cellid <- paste0(tmp$cellid, "-", dataset.name)
-  }
-  rownames(tmp) <- paste0(rownames(tmp), "-", dataset.name)
+  rownames(tmp) <- paste0(rownames(tmp), ".", dataset.name)
   tmp["dataset"] <- dataset.name
   if(nrow(total) == 0){
     total <- tmp
@@ -104,10 +137,4 @@ format_dose_col <- function(dose_colnames){
     return(paste0("dose", dose_num, ".", dose_type))
   }
   return(unlist(lapply(dose_colnames, format)))
-}
-
-get_curation_object <- function(data, col_names, id_name){
-  curationObj <- data[col_names]
-  colnames(curationObj)[which(names(curationObj) == id_name)] <- paste0("unique.", id_name)
-  return(curationObj)
 }
