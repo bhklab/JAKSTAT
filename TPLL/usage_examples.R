@@ -4,7 +4,7 @@ library(plotly)
 ##### Using PSet ########
 
 # load PSet
-PSet <- readRDS('./PSet/TPLL_PSet.RDS')
+TPLL <- readRDS('./Data/TPLL.rds')
 
 # 1. get summary of molecular profiles:
 molecularProfiles  <- PSet@molecularProfiles

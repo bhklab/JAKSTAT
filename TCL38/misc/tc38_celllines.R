@@ -1,4 +1,4 @@
-setwd("~/Documents/github/jakstat-pset/TCL38")
+setwd("~/Documents/github/jakstat-pset/TCL38/misc")
 library(dplyr) 
 library(tidyr)
 library(readxl)
