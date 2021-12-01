@@ -15,11 +15,11 @@ cell_drug_combinations <- get_cell_drug_combinations(pset.list)
 cells <- levels(cell_drug_combinations$cellid)
 drugs <- levels(cell_drug_combinations$drugid)
 
-current.compounds <- read.delim("current_compounds.txt", header=FALSE)
+current.compounds <- read.delim("./data/current_compounds.txt", header=FALSE)
 current.compounds <- current.compounds$V1
 available.current.compounds <- drugs[tolower(drugs) %in% tolower(current.compounds)]
 
-experiments.pharmacodb <- read.csv("experiments_pharmacodb.csv")
+experiments.pharmacodb <- read.csv("./data/experiments_pharmacodb.csv")
 experiments.pharmacodb <- experiments.pharmacodb[experiments.pharmacodb$cell %in% cells, ]
 
 heatmap.aac <- data.frame(matrix(data=NA, nrow=length(current.compounds), ncol=length(cells)))
@@ -96,3 +96,5 @@ ggplot(stdev.long, aes(x = cell, y = compound, fill = Std.Dev)) +
   geom_tile(color = "black") +
   scale_fill_gradient(low = "red", high = "yellow", na.value="white") + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+write.csv(experiments.pharmacodb, "experiments.csv")

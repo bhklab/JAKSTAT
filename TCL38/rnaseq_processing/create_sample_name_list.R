@@ -29,7 +29,7 @@ sample.names <- lapply(samples.list, function(vec){
 })
 sample.names <- unlist(sample.names)
 
-col.names <- c("CCG Sample ID", "Sample Name", "Cell", "RNA-seq Sample", "Rerun Sample")
+col.names <- c("CCG Sample ID", "Sample Name", "Cell", "Kallisto Sample Name", "Kallisto Rerun Sample")
 samples.df <- data.frame(matrix(data=NA, ncol=length(col.names), nrow=length(id)))
 colnames(samples.df) <- col.names
 samples.df$`CCG Sample ID` <- id
@@ -44,7 +44,7 @@ rnaseq.sample.names <- lapply(rownames(samples.df), function(id){
   filtered <- rnaseq.samples[str_detect(rnaseq.samples$sample, id), ]
   return(filtered$sample)
 })
-samples.df$`RNA-seq Sample` <- unlist(rnaseq.sample.names)
+samples.df$`Kallisto Sample Name` <- unlist(rnaseq.sample.names)
 
 rnaseq.sample.names <- lapply(rownames(samples.df), function(id){
   filtered <- rnaseq.samples.rerun[str_detect(rnaseq.samples.rerun$sample, id), ]
@@ -53,7 +53,7 @@ rnaseq.sample.names <- lapply(rownames(samples.df), function(id){
   }
   return(filtered$sample)
 })
-samples.df$`Rerun Sample` <- unlist(rnaseq.sample.names)
+samples.df$`Kallisto Rerun Sample` <- unlist(rnaseq.sample.names)
 
 for(cellname in tcl38$Cell.line){
   samples.df[str_detect(tolower(str_replace_all(samples.df$`Sample Name`, "-", "")), tolower(str_replace_all(cellname, "-", ""))), ]$Cell <- cellname
