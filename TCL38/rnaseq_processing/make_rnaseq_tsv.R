@@ -1,6 +1,6 @@
 library(stringr)
 
-files <- read.delim("filenames.txt", header=FALSE)
+files <- read.delim("./data/filenames.txt", header=FALSE)
 sample.names <- str_extract(files$V1, "\\d+_S\\d+")
 sample.names <- unique(sample.names)
 
@@ -20,4 +20,4 @@ tsv$sample <- sample.names
 tsv$read1 <- read1
 tsv$read2 <- read2
 
-write.table(tsv, file='samples.tsv', quote=FALSE, sep='\t', row.names = FALSE)
+write.table(tsv, file='./data/samples.tsv', quote=FALSE, sep='\t', row.names = FALSE)
