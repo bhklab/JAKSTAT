@@ -7,6 +7,8 @@ process_info_df <- data.frame(matrix(nrow=0, ncol=0))
 
 files <- list.files("./data/original")
 
+combined = data.frame(matrix(nrow=0, ncol=0))
+
 for(file in files){
   lines <- readLines(paste0("./data/original/", file), warn = FALSE)
   data_start <- str_which(lines, "AberrationNo")
@@ -72,27 +74,41 @@ for(file in files){
   for(col_name in header){
     data_df[[col_name]] <- col_values[[col_name]]
   }
-  write.csv(data_df, file=paste0("./data/formatted/", cellname, ".csv"), row.names=FALSE)
-}
-
-in_dir <- "./data/formatted/"
-samples <- list.files(in_dir, full.names=FALSE)
-
-combined = data.frame(matrix(nrow=0, ncol=0))
-for(sample in samples){
-  data <- read.csv(paste0(in_dir, sample))
-  ids <- lapply(data$AberrationNo, function(num){
-    return(paste0(str_remove(sample, ".csv"), "_", num))
+  # write.csv(data_df, file=paste0("./data/formatted/", cellname, ".csv"), row.names=FALSE)
+  
+  ids <- lapply(data_df$AberrationNo, function(num){
+    return(paste0(cellname, "_", num))
   })
   ids = unlist(ids)
-  data <- as.data.frame(append(data, list(id=ids, cell=str_remove(sample, ".csv")), after=0)) 
+  data_df <- as.data.frame(append(data_df, list(id=ids, cell=cellname), after=0)) 
   if(dim(combined)[1] == 0){
-    combined <- data
+    combined <- data_df
   }else{
-    combined <- dplyr::bind_rows(combined, data)
+    combined <- dplyr::bind_rows(combined, data_df)
   }
 }
+
 rownames(combined) <- combined$id
 combined$id <- NULL
+
+# in_dir <- "./data/formatted/"
+# samples <- list.files(in_dir, full.names=FALSE)
+# 
+# combined = data.frame(matrix(nrow=0, ncol=0))
+# for(sample in samples){
+#   data <- read.csv(paste0(in_dir, sample))
+#   ids <- lapply(data$AberrationNo, function(num){
+#     return(paste0(str_remove(sample, ".csv"), "_", num))
+#   })
+#   ids = unlist(ids)
+#   data <- as.data.frame(append(data, list(id=ids, cell=str_remove(sample, ".csv")), after=0)) 
+#   if(dim(combined)[1] == 0){
+#     combined <- data
+#   }else{
+#     combined <- dplyr::bind_rows(combined, data)
+#   }
+# }
+# rownames(combined) <- combined$id
+# combined$id <- NULL
 
 
