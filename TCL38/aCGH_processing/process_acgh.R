@@ -1,16 +1,36 @@
 library(stringr)
 library(dplyr)
 
-source("./functions.R")
+get_process_info <- function(cellname, filename, lines){
+  process_lines <- lines[1: (data_start - 1)]
+  process_lines <- process_lines[!str_detect(process_lines, "^\\t+$")]
+  process_lines <- str_remove_all(process_lines, "\\t")
+  process_info <- lapply(process_lines, function(line){
+    unlist(str_split(line, ": "))
+  })
+  info_data <- lapply(process_info, function(info){
+    return(str_trim(info[2], "both"))
+  })
+  info_col <- unlist(lapply(process_info, function(info){
+    return(info[1])
+  }))
+  info_col <- str_remove_all(info_col, "[^\\s\\w_]")
+  info_col <- str_to_lower(info_col)
+  info_col <- str_replace_all(info_col, "\\s", "_")
+  names(info_data) <- info_col
+  info_data <- c(list(cell=cellname, file=filename), info_data)
+  info_data <- info_data[names(info_data) != ""]
+  return(info_data)
+}
 
 process_info_df <- data.frame(matrix(nrow=0, ncol=0))
 
-files <- list.files("./data/original")
+files <- list.files("./data")
 
-combined = data.frame(matrix(nrow=0, ncol=0))
-
+# combined = data.frame(matrix(nrow=0, ncol=0))
+df_list <- list()
 for(file in files){
-  lines <- readLines(paste0("./data/original/", file), warn = FALSE)
+  lines <- readLines(paste0("./data/", file), warn = FALSE)
   data_start <- str_which(lines, "AberrationNo")
   
   data_lines <- lines[data_start:(length(lines))] 
@@ -75,40 +95,31 @@ for(file in files){
     data_df[[col_name]] <- col_values[[col_name]]
   }
   # write.csv(data_df, file=paste0("./data/formatted/", cellname, ".csv"), row.names=FALSE)
+  data_df$Gene_Names <- str_remove_all(data_df$Gene_Names, '"')
+  data_df$Hs_hg19_CNV_20120403 <- str_remove_all(data_df$Hs_hg19_CNV_20120403, '"')
+  data_df$Hs_hg19_miRNA_20120403 <- str_remove_all(data_df$Hs_hg19_miRNA_20120403, '"')
+  data_df$Mm_mm8_miRNA_20090908 <- str_remove_all(data_df$Mm_mm8_miRNA_20090908, '"')
+  df_list[[cellname]] <- data_df
   
-  ids <- lapply(data_df$AberrationNo, function(num){
-    return(paste0(cellname, "_", num))
-  })
-  ids = unlist(ids)
-  data_df <- as.data.frame(append(data_df, list(id=ids, cell=cellname), after=0)) 
-  if(dim(combined)[1] == 0){
-    combined <- data_df
-  }else{
-    combined <- dplyr::bind_rows(combined, data_df)
-  }
+  # ids <- lapply(data_df$AberrationNo, function(num){
+  #   return(paste0(cellname, "_", num))
+  # })
+  # ids = unlist(ids)
+  # data_df <- as.data.frame(append(data_df, list(id=ids, cell=cellname), after=0)) 
+  # if(dim(combined)[1] == 0){
+  #   combined <- data_df
+  # }else{
+  #   combined <- dplyr::bind_rows(combined, data_df)
+  # }
 }
-
-rownames(combined) <- combined$id
-combined$id <- NULL
-
-# in_dir <- "./data/formatted/"
-# samples <- list.files(in_dir, full.names=FALSE)
-# 
-# combined = data.frame(matrix(nrow=0, ncol=0))
-# for(sample in samples){
-#   data <- read.csv(paste0(in_dir, sample))
-#   ids <- lapply(data$AberrationNo, function(num){
-#     return(paste0(str_remove(sample, ".csv"), "_", num))
-#   })
-#   ids = unlist(ids)
-#   data <- as.data.frame(append(data, list(id=ids, cell=str_remove(sample, ".csv")), after=0)) 
-#   if(dim(combined)[1] == 0){
-#     combined <- data
-#   }else{
-#     combined <- dplyr::bind_rows(combined, data)
-#   }
-# }
+# format cell values
+# combined$Gene_Names <- str_remove_all(combined$Gene_Names, '"')
+# combined$Hs_hg19_CNV_20120403 <- str_remove_all(combined$Hs_hg19_CNV_20120403, '"')
+# combined$Hs_hg19_miRNA_20120403 <- str_remove_all(combined$Hs_hg19_miRNA_20120403, '"')
+# combined$Mm_mm8_miRNA_20090908 <- str_remove_all(combined$Mm_mm8_miRNA_20090908, '"')
 # rownames(combined) <- combined$id
 # combined$id <- NULL
 
-
+# output data
+saveRDS(df_list, "../create_multiassay/data/acgh_assay_data.rds")
+write.csv(process_info_df, "../create_multiassay/data/acgh_samples.csv")
