@@ -1,8 +1,10 @@
 library(stringr)
 library(dplyr)
 
+# Annotation data for the transcripts
 load("./Data/Ensembl.v75.annotation.RData") #for hg17 (Ensembl v75)
 
+# The abundance.tsv files for each samples were obtained from /repository/ukoeln_herling/procdata/human/rna_seq/202111/output
 in_dir <- "./data/rnaseq_abundance/"
 
 get_abundance_df <- function(dir, samples, type){

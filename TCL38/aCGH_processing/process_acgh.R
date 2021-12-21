@@ -25,6 +25,7 @@ get_process_info <- function(cellname, filename, lines){
 
 process_info_df <- data.frame(matrix(nrow=0, ncol=0))
 
+# Data obtained from /repository/vmuvienna_neubauer/procdata/20211110/Tcell tumors_aCGH_Aberr Reports
 files <- list.files("./data")
 
 # combined = data.frame(matrix(nrow=0, ncol=0))
@@ -100,26 +101,9 @@ for(file in files){
   data_df$Hs_hg19_miRNA_20120403 <- str_remove_all(data_df$Hs_hg19_miRNA_20120403, '"')
   data_df$Mm_mm8_miRNA_20090908 <- str_remove_all(data_df$Mm_mm8_miRNA_20090908, '"')
   df_list[[cellname]] <- data_df
-  
-  # ids <- lapply(data_df$AberrationNo, function(num){
-  #   return(paste0(cellname, "_", num))
-  # })
-  # ids = unlist(ids)
-  # data_df <- as.data.frame(append(data_df, list(id=ids, cell=cellname), after=0)) 
-  # if(dim(combined)[1] == 0){
-  #   combined <- data_df
-  # }else{
-  #   combined <- dplyr::bind_rows(combined, data_df)
-  # }
 }
-# format cell values
-# combined$Gene_Names <- str_remove_all(combined$Gene_Names, '"')
-# combined$Hs_hg19_CNV_20120403 <- str_remove_all(combined$Hs_hg19_CNV_20120403, '"')
-# combined$Hs_hg19_miRNA_20120403 <- str_remove_all(combined$Hs_hg19_miRNA_20120403, '"')
-# combined$Mm_mm8_miRNA_20090908 <- str_remove_all(combined$Mm_mm8_miRNA_20090908, '"')
-# rownames(combined) <- combined$id
-# combined$id <- NULL
 
 # output data
+# The following data are used to create MultiAssayExperiment object.
 saveRDS(df_list, "../create_multiassay/data/acgh_assay_data.rds")
 write.csv(process_info_df, "../create_multiassay/data/acgh_samples.csv")

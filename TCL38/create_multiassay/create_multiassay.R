@@ -5,9 +5,20 @@ library(Biobase)
 library(GenomicRanges)
 library(RaggedExperiment)
 
+#' To run this script, 
+#' you need the following files by running aCGH_processing/process_acgh.R
+#' 1. acgh_samples.csv
+#' 2. acgh_assay_data.rds
+#' and the following files by running rnaseq_processing/process_abundance.R
+#' 1. rnaseq_samples.csv
+#' 2. counts_averaged.csv
+#' 3. tpm_averaged.csv
+
 # create sample dataframe
-acgh_samples <- read.csv("./data/acgh_samples.csv", row.names=1)
-rnaseq_samples <- read.csv("./data/rnaseq_samples.csv", row.names=1)
+# The csv file is created with aCGH_processing/process_acgh.R
+acgh_samples <- read.csv("./data/acgh_samples.csv", row.names=1) 
+# The csv file is created with rnaseq_processing/process_abundance.R
+rnaseq_samples <- read.csv("./data/rnaseq_samples.csv", row.names=1) 
 
 acgh_cells <- unique(acgh_samples$cell)
 rnaseq_cells <- unique(rnaseq_samples$cell)
@@ -46,6 +57,7 @@ for(cell in acgh_cells){
 colnames(samples_df)[colnames(samples_df) %in% colnames(acgh_samples)] <- paste0("acgh_", colnames(samples_df)[colnames(samples_df) %in% colnames(acgh_samples)])
 
 # read RNA-seq data
+# The csv files are created with rnaseq_processing/process_abundance.R.
 rnaseq_counts <- read.csv("./data/counts_averaged.csv", row.name=1)
 colnames(rnaseq_counts) <- str_remove(colnames(rnaseq_counts), "X") # remove "X" prefix in column names.
 rnaseq_tpm <- read.csv("./data/tpm_averaged.csv", row.name=1)
@@ -57,6 +69,7 @@ expr_data_counts <- ExpressionSet(assayData=as.matrix(rnaseq_counts), phenoData=
 expr_data_tpm <- ExpressionSet(assayData=as.matrix(rnaseq_tpm), phenoData=expr_pheno)
 
 # create GenomicRanges objects for aCGH data, and parse them into a RaggedExperiment object
+# The RDS is created with aCGH_processing/process_acgh.R.
 acgh_data <- readRDS("./data/acgh_assay_data.rds")
 genomic_ranges_list <- GRangesList()
 for(sample in names(acgh_data)){
