@@ -19,7 +19,7 @@ get_abundance_df <- function(dir, samples, type){
     }
     abundance_df <- cbind(abundance_df, read_in[, sample][match(rownames(abundance_df), rownames(read_in))])
   }
-  colnames(abundance_df) <- samples
+  colnames(abundance_df) <- str_remove_all(samples, "[\\s\\t\\n]")
   return(abundance_df)
 }
 
@@ -81,7 +81,7 @@ colnames(rerun) <- c("kallisto_sample_name", "sample_name", "cell")
 rerun$rerun <- TRUE
 coldata <- dplyr::bind_rows(coldata, rerun)
 coldata <- coldata[order(coldata$kallisto_sample_name), ]
-rownames(coldata) <- coldata$kallisto_sample_name
+rownames(coldata) <- str_remove_all(coldata$kallisto_sample_name, "[\\s\\t\\n]")
 coldata$healthy <- unlist(lapply(coldata$cell, function(cell){if(cell == "BC"){return(TRUE)} else {return(NA)}}))
 
 # rowdata
@@ -89,10 +89,10 @@ rowdata_counts <- get_rowdata_df(counts_df_average, features_transcript)
 rowdata_tpm <- get_rowdata_df(tpm_df_average, features_transcript)
 
 # output the curated data
-write.csv(counts_df, "../create_multiassay/data/counts.csv")
-write.csv(tpm_df, "../create_multiassay/data/tpm.csv")
-write.csv(counts_df_average, "../create_multiassay/data/counts_averaged.csv")
-write.csv(tpm_df_average, "../create_multiassay/data/tpm_averaged.csv")
-write.csv(rowdata_counts, "../create_multiassay/data/counts_annotation.csv")
-write.csv(rowdata_tpm, "../create_multiassay/data/tpm_annotation.csv")
-write.csv(coldata, "../create_multiassay/data/rnaseq_samples.csv")
+write.csv(counts_df, "../create_multiassay/data/counts.csv", row.names = TRUE)
+write.csv(tpm_df, "../create_multiassay/data/tpm.csv", row.names = TRUE)
+write.csv(counts_df_average, "../create_multiassay/data/counts_averaged.csv", row.names = TRUE)
+write.csv(tpm_df_average, "../create_multiassay/data/tpm_averaged.csv", row.names = TRUE)
+write.csv(rowdata_counts, "../create_multiassay/data/counts_annotation.csv", row.names = TRUE)
+write.csv(rowdata_tpm, "../create_multiassay/data/tpm_annotation.csv", row.names = TRUE)
+write.csv(coldata, "../create_multiassay/data/rnaseq_samples.csv", row.names = TRUE)
