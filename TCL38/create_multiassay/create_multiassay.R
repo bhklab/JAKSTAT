@@ -52,13 +52,13 @@ rnaseq_tpm <- read.csv("./data/tpm_averaged.csv", row.name=1)
 colnames(rnaseq_tpm) <- str_remove(colnames(rnaseq_tpm), "X") # remove "X" prefix in column names.
 
 # create ExpressionSet objects for the RNA-seq data
-expr_pheno <- as(data.frame(slope53=rnorm(length(colnames(rnaseq_counts))), row.names=colnames(rnaseq_counts)), "AnnotatedDataFrame")
+expr_pheno <- as(rnaseq_samples, "AnnotatedDataFrame")
 expr_data_counts <- ExpressionSet(assayData=as.matrix(rnaseq_counts), phenoData=expr_pheno)
 expr_data_tpm <- ExpressionSet(assayData=as.matrix(rnaseq_tpm), phenoData=expr_pheno)
 
 # create GenomicRanges objects for aCGH data, and parse them into a RaggedExperiment object
 acgh_data <- readRDS("./data/acgh_assay_data.rds")
-genomic_ranges_list <- GenomicRangesList()
+genomic_ranges_list <- GRangesList()
 for(sample in names(acgh_data)){
   tmp <- acgh_data[[sample]]
   genomic_ranges_list[[sample]] <- GRanges(
@@ -107,8 +107,11 @@ acgh_sample_map$primary <- unlist(cells)
 acgh_sample_map$assay <- "acgh"
 sample_map_df <- dplyr::bind_rows(sample_map_df, acgh_sample_map)
 
+# Create MultiAssayExp object
 multiAssay <- MultiAssayExperiment(
   list("expr_counts"=expr_data_counts, "expr_tpm"=expr_data_tpm, "acgh"=acgh_ragged_exp), 
   samples_df, 
   sample_map_df
 )
+
+saveRDS(multiAssay, "./data/TCL38_MultiAssayExp.rds")
