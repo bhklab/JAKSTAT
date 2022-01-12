@@ -1,2 +1,2 @@
-# jakstat-pset
-PSet generation scripts for datasets shared by JAK STAT partners.
+# JAKSTAT
+Repository for data processing scripts used in the projects associated with JAKSTAT consortium.
