@@ -1,8 +1,11 @@
 ### functions used for processing TPLL drug screen data ###
 
-get_raw_sensitivity <- function(root_dir, colNames, p_number_file){
+get_raw_sensitivity <- function(root_dir, colNames, p_number_file, corrected_data_dir){
   # read in all the drug screen data, and merge all dose and viability data
   files <- list.files(path=root_dir, pattern = "*.Rdata$", recursive=TRUE)
+  corrected_files <- list.files(path=corrected_data_dir, pattern = "*.Rdata$")
+  corrected <- str_split(corrected_files, "_")
+  corrected <- unlist(lapply(corrected, function(item){return(item[1])}))
   
   conc_tested <- as.numeric(length(colNames)) # number of concentrations tested for each experiment (same as number of columns)
   
@@ -14,6 +17,14 @@ get_raw_sensitivity <- function(root_dir, colNames, p_number_file){
   
   for(file in files){
     load(paste0(root_dir, file))
+    sample_name <- unlist(str_split(rownames(dose.df)[1], "_"))[1]
+    
+    if(sample_name %in% corrected){
+      print(paste(sample_name, "correction"))
+      rm(dose.df, viability.df)
+      load(paste0(corrected_data_dir, corrected_files[str_detect(corrected, sample_name)]))
+    }    
+
     dose_merged <- rbind(dose_merged, dose.df)
     viability_merged <- rbind(viability_merged, viability.df)
     rm(dose.df, viability.df)
