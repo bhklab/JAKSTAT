@@ -2,6 +2,7 @@
 
 ###load packages##
 library('tibble')
+library(readxl)
 
 ##### Functions #####
 read_and_format_data <- function(path){
@@ -106,23 +107,20 @@ add_p_numbers_to_clinical_data <- function(clinical_data, p_number_dir){
 }
 
 assign_p_number <- function(mol_data, datatype) {
-  annotation <- NULL
+  annotation <- read_excel('./Data/p_number_table.xlsx', sheet=datatype)
   if(datatype == 'wes_single'){
     # merge wes and wes_followup annotations
-    annotation <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '.csv'))
-    followup <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '_followup', '.csv'))
+    followup <- read_excel('./Data/p_number_table.xlsx', sheet=paste0(datatype, "_followup"))
     
-    # format time series TP number to "TP###.t#
+    # format time series TP number to "TP###.t#"
     followup$TP_number <- str_replace(followup$TP_number, '^TP\\d{3}_', format_clinical_rowname)
     
     annotation <- bind_rows(annotation, followup)
-  }else{
-    annotation <- read.csv(paste0('./Data/p-numbers/p_number_', datatype, '.csv'))
   }
   
   # if no p-number is assigned, assign the TP number. This is the case for control samples.
   for(i in rownames(annotation)){
-    if(annotation[i, 'p_number'] == ''){
+    if(is.na(annotation[i, 'p_number'])){
       annotation[i, 'p_number'] = annotation[i, 'TP_number']
     }
   }
@@ -146,14 +144,15 @@ assign_p_number <- function(mol_data, datatype) {
   return(mol_data)
 }
 
-get_clinical_sample_data <- function(total_samples, filepath, timeseries_filepath){
+get_clinical_sample_data <- function(total_samples, filepath, timeseries_filepath, timeseries_sheet){
   clinical_samples <- read.csv(filepath)
   row.names(clinical_samples) <- clinical_samples$p_number
   colnames(clinical_samples)[2] <- "cellid"
   clinical_samples <- add_column(clinical_samples, time_series = NA, .after="cellid")
   
   # add time series designation
-  followup <- read.csv(timeseries_filepath)
+  # followup <- read.csv(timeseries_filepath)
+  followup <- read_excel(timeseries_filepath, sheet=timeseries_sheet)
   followup$TP_number <- str_replace(followup$TP_number, '^TP\\d{3}_', format_clinical_rowname)
   rownames(followup) <- followup$p_number
   for(pnum in followup$p_number){
@@ -199,13 +198,20 @@ get_gene_names <- function(genes, data){
   return(gene_names %>% group_by(gene_name) %>% summarize(Ensembl_ID=sapply(list(gene_id), paste, collapse=","))) 
 }
 
-get_summarized_experiment <- function(data, clinical_sample_data, genes, gene_column_name, annotation) {
+get_summarized_experiment <- function(data, clinical_sample_data, genes, gene_column_name, annotation, datatype=NULL) {
   filtered_clinical_sample_data <- clinical_sample_data[row.names(clinical_sample_data) %in% colnames(data), ]
   
-  if(gene_column_name == 'gene_id'){
-    filtered_gene_info <- get_gene_info(genes, data)
+  if(datatype == 'mirna'){
+    filtered_gene_info <- data.frame(matrix(data=NA, ncol=1, nrow=length(rownames(data))))
+    colnames(filtered_gene_info) <- c('id')
+    rownames(filtered_gene_info) <- rownames(data)
+    filtered_gene_info$id <- rownames(data)
   }else{
-    filtered_gene_info <- get_gene_names(genes, data)
+    if(gene_column_name == 'gene_id'){
+      filtered_gene_info <- get_gene_info(genes, data)
+    }else{
+      filtered_gene_info <- get_gene_names(genes, data)
+    }
   }
   
   # remove any genes that are not in both data, and filtered_gene_info
