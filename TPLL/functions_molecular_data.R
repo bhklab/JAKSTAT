@@ -107,10 +107,10 @@ add_p_numbers_to_clinical_data <- function(clinical_data, p_number_dir){
 }
 
 assign_p_number <- function(mol_data, datatype) {
-  annotation <- read_excel('./Data/p_number_table.xlsx', sheet=datatype)
+  annotation <- read_excel('./Data/p_number_moldata.xlsx', sheet=datatype)
   if(datatype == 'wes_single'){
     # merge wes and wes_followup annotations
-    followup <- read_excel('./Data/p_number_table.xlsx', sheet=paste0(datatype, "_followup"))
+    followup <- read_excel('./Data/p_number_moldata.xlsx', sheet=paste0(datatype, "_followup"))
     
     # format time series TP number to "TP###.t#"
     followup$TP_number <- str_replace(followup$TP_number, '^TP\\d{3}_', format_clinical_rowname)
