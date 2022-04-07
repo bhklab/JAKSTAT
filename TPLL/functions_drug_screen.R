@@ -55,7 +55,7 @@ get_raw_sensitivity <- function(root_dir, colNames, p_number_file, corrected_dat
   return(raw.sensitivity)
 }
 
-get_sensitivity_info <- function(raw.sensitivity) {
+get_sensitivity_info <- function(raw.sensitivity, min_col, max_col) {
   sensitivity_info <- data.frame(matrix(data=NA, ncol=4, nrow=0))
   colnames(sensitivity_info) <- c('cellid', 'drugid', 'chosen.min.range', 'chosen.max.range')
   doseDF <- raw.sensitivity[,,'Dose']
@@ -63,7 +63,7 @@ get_sensitivity_info <- function(raw.sensitivity) {
     split <- strsplit(row, '_')
     cell <- if(stringr::str_detect(split[[1]][1], '^CD*') || stringr::str_detect(split[[1]][1], '^Helsinki*')) paste(split[[1]][1], split[[1]][2], sep='_') else split[[1]][1]
     drug <- if(stringr::str_detect(split[[1]][1], '^CD*') || stringr::str_detect(split[[1]][1], '^Helsinki*')) split[[1]][3] else split[[1]][2]
-    sensitivity_info[row, ] <- c(cell, drug, doseDF[row, 'Dose1'], doseDF[row, 'Dose5'], FALSE)
+    sensitivity_info[row, ] <- c(cell, drug, doseDF[row, min_col], doseDF[row, max_col], FALSE)
   }
   return(sensitivity_info[order(rownames(sensitivity_info)),])
 }

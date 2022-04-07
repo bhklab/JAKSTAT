@@ -2,8 +2,6 @@ library(stringr)
 library(dplyr)
 library(readxl)
 
-source(file='functions_drug_screen.R') # functions used to process drug sensitivity data
-
 get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, path){
   sample_data <- read_excel(path, sheet=datatype)
   sample_data <- data.frame(sample_data[, c('DRUG_NAME', 'Max.Conc.tested', 'Min.Conc.tested', 'D1', 'D2', 'D3', 'D4', 'D5')])
@@ -25,26 +23,10 @@ get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, pa
   return(list('dose'=dose_df, 'viability'=viability_df))
 }
 
-get_raw_sensitivity <- function(dose_df, viability_df, num_doses){
-  return(array(
-    c(
-      as.matrix(dose_df), 
-      as.matrix(viability_df)
-    ), 
-    c(nrow(dose_df), num_doses, 2), 
-    dimnames=list(
-      rownames(dose_df), 
-      doses, 
-      c("Dose", "Viability")
-    )
-  ))
-}
-
 summary_path <- './Data/drug_screen_andersson_et_al/DSS_PLL.xlsx'
 summary_sheet <- read_excel(summary_path)
 samples <- colnames(summary_sheet)[2:length(colnames(summary_sheet))]
 
-sensitivity_info <- readRDS('./Data/curated_data/sensitivity_info.rds')
 clinical_sample <- readRDS('./Data/curated_data/clinical_sample_data.rds')
 p_number_drug_sensitivity <- read.csv('./Data/p_number_drug_sensitivity.csv')
 
@@ -114,21 +96,48 @@ for(sample in samples){
 colnames(dose_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
 colnames(viability_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
 
-raw.sensitivity <- array(
-  c(
-    as.matrix(dose_df), 
-    as.matrix(viability_df)
-  ), 
-  c(nrow(dose_df), 5 , 2), 
-  dimnames=list(
-    rownames(dose_df), 
-    colnames(dose_df), 
-    c("Dose", "Viability")
-  )
-)
+# Merge dose and viability data frames into one dataframe
+raw.sensitivity <- cbind(dose_df, viability_df)
 
-##### 2. Create sensitivity_info #####
-sensitivity_info <- get_sensitivity_info(raw.sensitivity)
+saveRDS(raw.sensitivity, './Data/curated_data/new_raw_sensitivity.rds')
 
-##### 3. Create sensitivity_profile #####
-sensitivity_profile <- get_sensitivity_profile(raw.sensitivity)
+# # order data by row names
+# raw.sensitivity <- raw.sensitivity[order(rownames(raw.sensitivity)),]
+# 
+# conc_tested <- 5
+# 
+# # Make the merged dataframe into an array
+# raw.sensitivity <- array(
+#   c(
+#     as.matrix(raw.sensitivity[ ,1:conc_tested]), 
+#     as.matrix(raw.sensitivity[ ,(conc_tested + 1):(2 * conc_tested)])
+#   ), 
+#   c(nrow(raw.sensitivity), conc_tested , 2), 
+#   dimnames=list(
+#     rownames(raw.sensitivity), 
+#     colnames(raw.sensitivity[ ,1:conc_tested]), 
+#     c("Dose", "Viability")
+#   )
+# )
+
+# ##### 2. Create sensitivity_info #####
+# sensitivity_info <- get_sensitivity_info(raw.sensitivity, 'Dose1', 'Dose5')
+# 
+# ##### 3. Create sensitivity_profile #####
+# sensitivity_profile <- get_sensitivity_profile(raw.sensitivity)
+# 
+# dose_rownames <- rownames(dose_df)
+# viability_rownames <- rownames(viability_df)
+# info_rownames <- rownames(sensitivity_info)
+# profile_rownames <- rownames(sensitivity_profile)
+# 
+# setdiff(info_rownames, profile_rownames)
+# 
+# saveRDS(raw.sensitivity, './Data/curated_data/new_raw_sensitivity.rds')
+# saveRDS(sensitivity_info, './Data/curated_data/new_sensitivity_info.rds')
+# saveRDS(sensitivity_profile, './Data/curated_data/new_sensitivity_profile.rds')
+
+# [1] "sample not found: FM.1158"                                                                                                                                                       
+# [1] "sample not found: FM.1241"
+# [1] "sample not found: FM.615"
+# [1] "sample not found: FM.616"
