@@ -6,14 +6,14 @@ library(plotly)
 # load PSet
 PSet <- readRDS('./TPLL_PSet.rds')
 
-# 1. get summary of molecular profiles:
-molecularProfiles  <- PSet@molecularProfiles
+# 1. get list of molecular profiles:
+molecularProfiles  <- molecularProfilesSlot(PSet)
 
 # To access sample data for each molecular profile:
-gep_samples <- data.frame(molecularProfiles[["gep"]]@colData) # replace "gep" with other molecular data types
+gep_samples <- data.frame(phenoInfo(PSet, 'gep')) # replace "gep" with other molecular data types
 
 # To access patient data:
-patient <- PSet@cell
+patient <- cellInfo(PSet)
 
 # 2. get summary of each molecular profile:
 ## for GEP
@@ -26,7 +26,7 @@ summarizeMolecularProfiles(PSet, mData='mut_wgs', summary.stat='and')
 # 'cell.lines' accespts one or more sample names
 # for GEP, 'features' parameter accepts Ensembl ID(s)
 
-gep_samples <- data.frame(molecularProfiles[["gep"]]@colData) # sample data included in the gep molecular profile.
+gep_samples <- data.frame(phenoInfo(PSet, 'gep')) # sample data included in the gep molecular profile.
 
 gep_summary <- summarizeMolecularProfiles(
   PSet, 
@@ -35,7 +35,7 @@ gep_summary <- summarizeMolecularProfiles(
   features='ENSG00000223972'
 )
 
-gep_summary@assays@data$exprs # displays the summary
+molecularProfiles()
 
 # For SNP, WES and WGS mutation data, 'features' parameter accepts gene names
 wes_single_summary <- summarizeMolecularProfiles(
@@ -46,31 +46,29 @@ wes_single_summary <- summarizeMolecularProfiles(
   features=c('A1CF', 'ABCB6')
 )
 
-wes_single_summary@assays@data$exprs
-
 # To summarize the time series data,
 
 # 1. obtain samples that are in the time series
-wes_mut_single_samples <- data.frame(molecularProfiles[["mut_wes_single"]]@colData)
+wes_mut_single_samples <- data.frame(phenoInfo(PSet, 'mut_wes_single'))
 timeseries_samples <- wes_mut_single_samples[!is.na(wes_mut_single_samples$time_series), c('cellid', 'time_series')]
 timeseries_samples <- timeseries_samples[with(timeseries_samples, order(cellid, time_series)), ]
 
 # 2. display the genes that are recorded in the timeseries samples
-wes_single <- molecularProfiles$mut_wes_single@assays@data$exprs
+wes_single <- molecularProfiles(PSet, 'mut_wes_single')
 timeseries_rows <- rownames(timeseries_samples[timeseries_samples$cellid == 'TP092', ])
 wes_single <- wes_single[, timeseries_rows]
 wes_single <- wes_single[rowSums(is.na(wes_single)) != ncol(wes_single), ]
 
 # 3. Drug Sensitivity Data Summary
 # summmarize drug sensitivity data
-drugs <- PSet@drug
+drugs <- drugInfo(PSet)
 
-sens_info <- PSet@sensitivity$info
+sens_info <- sensitivityInfo(PSet)
 
-sens_profile <- PSet@sensitivity$profiles
+sens_profile <- sensitivityProfiles(PSet)
 
 drug_sens_summary_ic50 <- summarizeSensitivityProfiles(PSet, cell.lines=unique(sens_info$cellid), sensitivity.measure="ic50_recomputed")
 
 # dose response curve
-PharmacoGx::drugDoseResponseCurve('Tipifarnib', 'TP050', list(PSet), plot.type = c("Both"))
+drugDoseResponseCurve('Tipifarnib', 'TP050', list(PSet), plot.type = c("Both"))
 

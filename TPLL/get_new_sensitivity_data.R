@@ -23,7 +23,9 @@ get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, pa
   return(list('dose'=dose_df, 'viability'=viability_df))
 }
 
-summary_path <- './Data/drug_screen_andersson_et_al/DSS_PLL.xlsx'
+root_dir <- './Data/additional_drug_screen_andersson_et_al/'
+
+summary_path <- paste0(root_dir, 'DSS_PLL.xlsx')
 summary_sheet <- read_excel(summary_path)
 samples <- colnames(summary_sheet)[2:length(colnames(summary_sheet))]
 
@@ -41,7 +43,7 @@ sample_map <- sample_map[!duplicated(sample_map[1:2]), ]
 
 corrected_names <- lapply(samples, function(name){
   if(str_detect(name, '^TP(\\d+)')){
-    return(paste0('Lyon', name))
+    return(paste0('PSLRU', name))
   }
   if(str_detect(name, '^FM.')){
     return(str_replace_all(name, '\\.', ''))
@@ -72,7 +74,7 @@ colnames(viability_df) <- doses
 
 datatype <- 'EC50'
 
-files <- list.files("./Data/drug_screen_andersson_et_al/processed_data")
+files <- list.files(paste0(root_dir, "processed_data"))
 sample_replace <- c("P0436", "P0619", "P0750")
 for(sample in samples){
   # print(sample)
@@ -83,7 +85,7 @@ for(sample in samples){
     filename <- grep(sample, files, ignore.case=TRUE, value=T)[1]
   }
   if(!is.na(filename)){
-    path <- paste0('./Data/drug_screen_andersson_et_al/processed_data/', filename)
+    path <- paste0(root_dir, 'processed_data/', filename)
     corrected_name <- samples_df[samples_df$samples == sample, ]$corrected[1]
     sample_raw_sensitivity <- get_sample_raw_sensitivity(sample, corrected_name, datatype, path)
     dose_df <- rbind(dose_df, sample_raw_sensitivity[['dose']])

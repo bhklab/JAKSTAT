@@ -19,6 +19,8 @@ old_sensitivity <- readRDS('./Data/curated_data/old_raw_sensitivity.rds')
 new_sensitivity <- readRDS('./Data/curated_data/new_raw_sensitivity.rds')
 
 # remove duplicate sensitivity data from the old data.
+# identical_rows <- intersect(rownames(old_sensitivity), rownames(new_sensitivity))
+
 rows_to_keep <- setdiff(rownames(old_sensitivity), rownames(new_sensitivity))
 old_sensitivity <- old_sensitivity[rownames(old_sensitivity) %in% rows_to_keep, ]
 raw.sensitivity <- rbind(new_sensitivity, old_sensitivity)
