@@ -11,7 +11,7 @@ get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, pa
   dose_df <- sample_data
   num <- 0
   for(d in doses){
-    dose_df[, d] <- dose_df$Min.Conc.tested * (10^num)
+    dose_df[, d] <- (dose_df$Min.Conc.tested * (10^num))/1000
     num <- num + 1
   }
   dose_df <- dose_df[, doses]
@@ -42,6 +42,7 @@ sample_map$tp_number <- tp_numbers
 sample_map <- sample_map[!duplicated(sample_map[1:2]), ]
 
 corrected_names <- lapply(samples, function(name){
+  print(name)
   if(str_detect(name, '^TP(\\d+)')){
     return(paste0('PSLRU', name))
   }

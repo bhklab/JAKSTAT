@@ -95,7 +95,7 @@ total_samples <- sort(total_samples)
 
 clinical_sample_data <- get_clinical_sample_data(
   total_samples, 
-  './Data/clinical_data_sample_based_2020_12_07.csv',
+  './Data/clinical_data_sample_based_2022_04_13.csv',
   './Data/p_number_moldata.xlsx',
   'wes_single_followup'
 )
