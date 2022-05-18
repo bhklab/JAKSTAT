@@ -99,6 +99,11 @@ for(sample in samples){
 colnames(dose_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
 colnames(viability_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
 
+# dose_df$Dose6 = dose_df$Dose5
+# dose_df$Dose7 = dose_df$Dose5
+# viability_df$Dose6 = viability_df$Dose5
+# viability_df$Dose7 = viability_df$Dose5
+
 # Merge dose and viability data frames into one dataframe
 raw.sensitivity <- cbind(dose_df, viability_df)
 
