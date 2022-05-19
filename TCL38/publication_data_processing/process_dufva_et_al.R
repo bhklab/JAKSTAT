@@ -1,6 +1,7 @@
 library(stringr)
 library(dplyr)
 library(readxl)
+library(PharmacoGx)
 
 get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, path){
   sample_data <- read_excel(path, sheet=datatype)
@@ -24,7 +25,43 @@ get_sample_raw_sensitivity <- function(sample_name, corrected_name, datatype, pa
   return(list('dose'=dose_df, 'viability'=viability_df))
 }
 
-tcl38_cells <- read.csv('../create_multiassay/data/rnaseq_samples.csv')
+get_sensitivity_info <- function(raw.sensitivity, min_col, max_col) {
+  sensitivity_info <- data.frame(matrix(data=NA, ncol=4, nrow=0))
+  colnames(sensitivity_info) <- c('cellid', 'drugid', 'chosen.min.range', 'chosen.max.range')
+  doseDF <- raw.sensitivity[,,'Dose']
+  for(row in rownames(doseDF)){
+    split <- strsplit(row, '_')
+    cell <- if(stringr::str_detect(split[[1]][1], '^CD*') || stringr::str_detect(split[[1]][1], '^Helsinki*')) paste(split[[1]][1], split[[1]][2], sep='_') else split[[1]][1]
+    drug <- if(stringr::str_detect(split[[1]][1], '^CD*') || stringr::str_detect(split[[1]][1], '^Helsinki*')) split[[1]][3] else split[[1]][2]
+    sensitivity_info[row, ] <- c(cell, drug, doseDF[row, min_col], doseDF[row, max_col], FALSE)
+  }
+  return(sensitivity_info[order(rownames(sensitivity_info)),])
+}
+
+get_sensitivity_profile <- function(raw.sensitivity) {
+  sensitivity_profile <- data.frame(matrix(data=NA, ncol=5, nrow=0))
+  colnames(sensitivity_profile) <- c(
+    'aac_recomputed', 
+    'ic50_recomputed', 
+    'HS', 
+    'E_inf', 
+    'EC50'
+  )
+  calculated_profiles <- PharmacoGx:::.calculateFromRaw(raw.sensitivity)
+  
+  for(row in rownames(raw.sensitivity[,,'Dose'])){
+    sensitivity_profile[row, ] <- c(
+      calculated_profiles$AUC[row], 
+      calculated_profiles$IC50[row],
+      calculated_profiles$pars[[row]]$HS,
+      calculated_profiles$pars[[row]]$E_inf,
+      calculated_profiles$pars[[row]]$EC50
+    )
+  }
+  return(sensitivity_profile[order(rownames(sensitivity_profile)),])
+}
+
+tcl38_cells <- read.csv('./data/rnaseq_samples.csv')
 tcl38_cells <- unique(tcl38_cells$cell)
 
 filepath <- './data/41467_2018_3987_MOESM10_ESM.xlsx'
@@ -50,11 +87,29 @@ for(cell_name in cells_map_df$dufva_cells){
   dose_df <- rbind(dose_df, raw_sens[['dose']])
   viability_df <- rbind(viability_df, raw_sens[['viability']])
 }
-
 colnames(dose_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
 colnames(viability_df) <- c('Dose1', 'Dose2', 'Dose3', 'Dose4', 'Dose5') 
+dose_df <- dose_df[order(rownames(dose_df)), ]
+viability_df <- viability_df[order(rownames(viability_df)), ]
 
+conc_tested <- 5
 
+# Make the merged dataframe into an array
+raw.sensitivity <- array(
+  c(
+    as.matrix(dose_df), 
+    as.matrix(viability_df)
+  ), 
+  c(nrow(dose_df), conc_tested , 2), 
+  dimnames=list(
+    rownames(dose_df), 
+    colnames(dose_df), 
+    c("Dose", "Viability")
+  )
+)
+
+sensitivity_info <- get_sensitivity_info(raw.sensitivity)
+sensitivity_profile <- get_sensitivity_profile(raw.sensitivity)
 
 # curate cell info
 curationCell <- data.frame(matrix(ncol=1, nrow=(length(rownames(cells_map_df)))))
@@ -76,12 +131,28 @@ cell$tissue_type <- curationTissue$tissue_type
 rownames(cell) <- curationCell$unique.cellid
 
 # extract drug info
-drugs <- read_excel(filepath, sheet='DSS_all')
-drugs <- drugs[, c('DRUG_NAME', 'Mechanism.Targets', 'Class.explained')]
-colnames(drugs) <- c('drugid', 'mechanism_targets', 'class_explained')
+drug <- read_excel(filepath, sheet='DSS_all')
+drug <- drug[, c('DRUG_NAME', 'Mechanism.Targets', 'Class.explained')]
+colnames(drug) <- c('drugid', 'mechanism_targets', 'class_explained')
 
-curationDrug <- data.frame(matrix(ncol=0, nrow=(length(drugs$drugid))))
-curationDrug$unique.drugid <- sort(drugs$drugid)
+curationDrug <- data.frame(matrix(ncol=0, nrow=(length(drug$drugid))))
+curationDrug$unique.drugid <- sort(drug$drugid)
 rownames(curationDrug) <- curationDrug$unique.drugid
 
+PSet <- PharmacoGx::PharmacoSet(
+  name="Dufva",
+  cell=cell,
+  drug=drug,
+  sensitivityInfo=sensitivity_info,
+  sensitivityRaw=raw.sensitivity,
+  sensitivityProfiles=sensitivity_profile,
+  sensitivityN=as.numeric(length(colnames(raw.sensitivity[,,'Dose']))),
+  curationCell=curationCell,
+  curationDrug=curationDrug,
+  curationTissue=curationTissue,
+  datasetType=c("both")
+)
 
+PSet@annotation$version <- 1	
+
+saveRDS(PSet, file="./data/Dufva_PSet.rds")
