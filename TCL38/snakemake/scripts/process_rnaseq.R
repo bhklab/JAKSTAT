@@ -48,5 +48,5 @@ write.csv(features_gene, file.path(output_dir, "gene_annotation.csv"), row.names
 write.csv(features_transcript, file.path(output_dir, "tx_annotation.csv"), row.names = TRUE)
 write.csv(coldata, file.path(output_dir, "rnaseq_samples.csv"), row.names = TRUE)
 
-unlink(file.path(input_dir, 'rnaseq'), recursive=FALSE)
-unlink(file.path(input_dir, '__MACOSX'), recursive=FALSE)
+unlink(file.path(input_dir, 'rnaseq'), recursive=TRUE)
+unlink(file.path(input_dir, '__MACOSX'), recursive=TRUE)

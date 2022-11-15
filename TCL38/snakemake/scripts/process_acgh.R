@@ -117,5 +117,5 @@ for(file in files){
 saveRDS(df_list, file.path(output_dir, "acgh_assay_data.rds"))
 write.csv(process_info_df, file.path(output_dir, "acgh_samples.csv"))
 
-unlink(file.path(input_dir, 'acgh'), recursive=FALSE)
-unlink(file.path(input_dir, '__MACOSX'), recursive=FALSE)
+unlink(file.path(input_dir, 'acgh'), recursive=TRUE)
+unlink(file.path(input_dir, '__MACOSX'), recursive=TRUE)

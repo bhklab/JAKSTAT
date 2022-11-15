@@ -17,6 +17,7 @@ library(RaggedExperiment)
 
 args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
+output_dir <- args[2]
  
 # input_dir <- '/Users/minoru/Documents/bhklab/jakstat/tcl38/data/multiassay_exp'
 
@@ -135,4 +136,4 @@ multiAssay <- MultiAssayExperiment(
   sample_map_df
 )
 
-saveRDS(multiAssay, file.path(input_dir, "TCL38_MultiAssayExp.rds"))
+saveRDS(multiAssay, file.path(output_dir, "TCL38_MultiAssayExp.rds"))
