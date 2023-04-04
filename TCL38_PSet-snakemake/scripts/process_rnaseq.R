@@ -8,14 +8,16 @@ args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
 output_dir <- args[2]
 
-# input_dir <- '/Users/minoru/Documents/bhklab/jakstat/tcl38/snakemake/rnaseq'
+# input_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/rnaseq'
 
 # Annotation data for the transcripts
 load(file.path(input_dir, "Gencode.v33.annotation.RData"))
 
 # The abundance.tsv files for each samples were obtained from /repository/ukoeln_herling/procdata/human/rna_seq/202111/output
-unzip(zipfile=file.path(input_dir, 'rnaseq.zip'), exdir = input_dir)
 sample_dir <- file.path(input_dir, 'rnaseq')
+dir.create(sample_dir)
+unzip(zipfile=file.path(input_dir, 'rnaseq.zip'), exdir = sample_dir)
+
 samples <- list.dirs(sample_dir, full.names=FALSE, recursive = FALSE)
 
 files <- file.path(sample_dir, samples, "abundance.h5")

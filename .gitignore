@@ -11,3 +11,4 @@ examples
 Data/.DS_Store
 PSet
 out
+.snakemake

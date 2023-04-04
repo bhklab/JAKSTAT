@@ -33,8 +33,9 @@ get_process_info <- function(cellname, filename, lines){
 process_info_df <- data.frame(matrix(nrow=0, ncol=0))
 
 # Data obtained from /repository/vmuvienna_neubauer/procdata/20211110/Tcell tumors_aCGH_Aberr Reports
-unzip(zipfile=file.path(input_dir, 'acgh.zip'), exdir = input_dir)
 acgh_dir <- file.path(input_dir, 'acgh')
+dir.create(acgh_dir)
+unzip(zipfile=file.path(input_dir, 'acgh.zip'), exdir = acgh_dir)
 files <- list.files(acgh_dir)
 
 # combined = data.frame(matrix(nrow=0, ncol=0))

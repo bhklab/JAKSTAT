@@ -15,8 +15,8 @@ source(file='functions_drug_screen.R') # functions used to process drug sensitiv
 #######################################
 
 # load data objects created by running get_old_sensitivity_data.R and get_new_sensitivity_data.R
-old_sensitivity <- readRDS('./Data/curated_data/old_raw_sensitivity.rds')
-new_sensitivity <- readRDS('./Data/curated_data/new_raw_sensitivity.rds')
+old_sensitivity <- readRDS('/Users/minoru/Code/bhklab/JAKSTAT/TPLL/Data/curated_data/old_raw_sensitivity.rds')
+new_sensitivity <- readRDS('/Users/minoru/Code/bhklab/JAKSTAT/TPLL/Data/curated_data/new_raw_sensitivity.rds')
 
 # remove duplicate sensitivity data from the old data.
 dup_rows <- intersect(rownames(old_sensitivity), rownames(new_sensitivity))

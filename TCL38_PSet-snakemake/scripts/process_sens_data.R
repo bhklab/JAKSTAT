@@ -1,19 +1,25 @@
 library(stringr)
 library(readxl)
+library(PharmacoGx)
 
 options(stringsAsFactors = FALSE)
 
 args <- commandArgs(trailingOnly = TRUE)
-input_dir <- args[1]
-output_dir <- args[2]
+input_dir <- paste0(args[[1]], 'sensitivitiy')
+output_dir <- paste0(args[[1]], 'processed')
 
-work_dir <- "/Users/minoru/Code/bhklab/JAKSTAT/Data"
+input_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/sensitivity'
+output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/processed'
 
-files <- list.files(file.path(work_dir, "sensitivity"))
+sens_dir <- file.path(input_dir, 'sensitivity')
+dir.create(sens_dir)
+unzip(zipfile=file.path(input_dir, 'sensitivity.zip'), exdir = sens_dir)
+
+files <- list.files(sens_dir)
 dfs <- list()
 for (file in files) {
   if (str_detect(file, "CTG")) {
-    df <- read_excel(file.path(work_dir, paste0("sensitivity/", file)))
+    df <- read_excel(file.path(sens_dir, file))
     df <- df[!df$ProductId %in% c("empty", "BzCl", "DMSO"), ]
     name <- str_replace(file, "Raw_Data_", "")
     name <- str_replace(name, ".xlsx", "")
@@ -52,8 +58,8 @@ for(cell in all_cells){
 }
 
 # Convert screen_id into standardized cell names
-multiassay <- readRDS(file.path(work_dir, 'MultiAssayExp/TCL38_MultiAssayExp.rds'))
-cells_standardized <- sort(rownames(data.frame(colData(multiassay))))
+samples <- read.csv(file.path(output_dir, 'rnaseq_samples.csv'))
+cells_standardized <- sort(unique(samples$cell))
 
 modified <- str_to_lower(all_cells)
 modified <- str_replace_all(modified, '[\\W_]', '')
@@ -85,3 +91,62 @@ viability_df$cell <- unlist(lapply(viability_df$cell, function(cell){
 dose_df$drug <- str_replace_all(dose_df$drug, '\\s', '_')
 viability_df$drug <- str_replace_all(viability_df$drug, '\\s', '_')
 
+doses <- c("Dose1", "Dose2", "Dose3", "Dose4", "Dose5")
+# invert the inhibition rate
+for(col in doses){
+  viability_df[[col]] <- 100 - as.numeric(viability_df[[col]])
+}
+
+rownames(dose_df) <- paste0(dose_df$cell, '_', dose_df$drug)
+rownames(viability_df) <- paste0(viability_df$cell, '_', viability_df$drug)
+raw.sensitivity <- cbind(dose_df, viability_df)
+raw.sensitivity[, c('cell', 'drug')] <- NULL
+raw.sensitivity[, c('cell', 'drug')] <- NULL
+
+# Make the merged dataframe into an array
+raw.sensitivity <- array(
+  c(
+    as.matrix(raw.sensitivity[ ,1:length(doses)]), 
+    as.matrix(raw.sensitivity[ ,(length(doses) + 1):(2 * length(doses))])
+  ), 
+  c(nrow(raw.sensitivity), length(doses) , 2), 
+  dimnames=list(
+    rownames(raw.sensitivity), 
+    colnames(raw.sensitivity[ ,1:length(doses)]), 
+    c("Dose", "Viability")
+  )
+)
+
+# sensitivity_info
+sensitivity_info <- data.frame(matrix(data=NA, ncol=4, nrow=length(rownames(dose_df))))
+colnames(sensitivity_info) <- c('cellid', 'drugid', 'chosen.min.range', 'chosen.max.range')
+sensitivity_info$cellid <- dose_df$cell
+sensitivity_info$drugid <- dose_df$drug
+sensitivity_info$chosen.min.range <- dose_df$Dose1
+sensitivity_info$chosen.max.range <- dose_df$Dose5
+rownames(sensitivity_info) <- paste0(dose_df$cell, '_', dose_df$drug)
+
+# sensitivity_profile
+sensitivity_profile <- data.frame(matrix(data=NA, ncol=5, nrow=0))
+colnames(sensitivity_profile) <- c(
+  'aac_recomputed', 
+  'ic50_recomputed', 
+  'HS', 
+  'E_inf', 
+  'EC50'
+)
+calculated_profiles <- PharmacoGx:::.calculateFromRaw(raw.sensitivity)
+
+for(row in rownames(raw.sensitivity[,,'Dose'])){
+  sensitivity_profile[row, ] <- c(
+    calculated_profiles$AUC[row], 
+    calculated_profiles$IC50[row],
+    calculated_profiles$pars[[row]]$HS,
+    calculated_profiles$pars[[row]]$E_inf,
+    calculated_profiles$pars[[row]]$EC50
+  )
+}
+
+saveRDS(raw.sensitivity, file.path(output_dir, 'raw_sensitivity.rds'))
+saveRDS(sensitivity_info, file.path(output_dir, 'sensitivity_info.rds'))
+saveRDS(sensitivity_profile, file.path(output_dir, 'sensitivity_profile.rds'))
