@@ -10,6 +10,7 @@ input_dir <- paste0(args[[1]], 'processed')
 output_dir <- args[[1]]
 
 input_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/processed'
+output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/'
 
 # The csv file is created with rnaseq_processing/process_abundance.R
 rnaseq_samples <- read.csv(file.path(input_dir, "rnaseq_samples.csv"), row.names=1) 
@@ -70,7 +71,7 @@ drug <- data.frame(matrix(ncol=0, nrow=(length(unique(sensitivity_info$drugid)))
 drug$drugid <- curationDrug$unique.drugid
 rownames(drug) <- curationDrug$unique.drugid
 
-PSet <- PharmacoGx::PharmacoSet(
+tcl38 <- PharmacoGx::PharmacoSet(
   molecularProfiles=list("rnaseq"=se),
   name="TCL38",
   cell=cell,
@@ -85,6 +86,6 @@ PSet <- PharmacoGx::PharmacoSet(
   datasetType=c("both")
 )
 
-saveRDS(PSet, paste0(output_dir, 'PSet_TCL38.rds'))
+saveRDS(tcl38, paste0(output_dir, 'PSet_TCL38.rds'))
 
-# drugDoseResponseCurve('Dinaciclib', 'ALL-SIL', list(PSet), plot.type = c("Both"))
+# drugDoseResponseCurve('Panobinostat', 'ALL-SIL', list(tcl38, ctrpv2, ccle), plot.type = c("Fitted"))

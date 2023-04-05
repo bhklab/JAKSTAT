@@ -95,10 +95,11 @@ doses <- c("Dose1", "Dose2", "Dose3", "Dose4", "Dose5")
 # invert the inhibition rate
 for(col in doses){
   viability_df[[col]] <- 100 - as.numeric(viability_df[[col]])
+  dose_df[[col]] <- as.numeric(dose_df[[col]]) / 1000 # get micro molar concentration
 }
 
-rownames(dose_df) <- paste0(dose_df$cell, '_', dose_df$drug)
-rownames(viability_df) <- paste0(viability_df$cell, '_', viability_df$drug)
+rownames(dose_df) <- paste0(dose_df$drug, '_', dose_df$cell)
+rownames(viability_df) <- paste0(viability_df$drug, '_', viability_df$cell)
 raw.sensitivity <- cbind(dose_df, viability_df)
 raw.sensitivity[, c('cell', 'drug')] <- NULL
 raw.sensitivity[, c('cell', 'drug')] <- NULL
@@ -124,7 +125,7 @@ sensitivity_info$cellid <- dose_df$cell
 sensitivity_info$drugid <- dose_df$drug
 sensitivity_info$chosen.min.range <- dose_df$Dose1
 sensitivity_info$chosen.max.range <- dose_df$Dose5
-rownames(sensitivity_info) <- paste0(dose_df$cell, '_', dose_df$drug)
+rownames(sensitivity_info) <- paste0(dose_df$drug, '_', dose_df$cell)
 
 # sensitivity_profile
 sensitivity_profile <- data.frame(matrix(data=NA, ncol=5, nrow=0))
