@@ -9,49 +9,80 @@
 prefix = config["prefix"]
 # filename = config["filename"]
 
-rule get_MultiAssay:
-  input:
-    prefix + 'processed/expr_list.rds',
-    prefix + 'processed/gene_annotation.csv',
-    prefix + 'processed/tx_annotation.csv',
-    prefix + 'processed/rnaseq_samples.csv',
-    prefix + 'processed/acgh_assay_data.rds',
-    prefix + 'processed/acgh_samples.csv'    
-  output:
-    prefix + 'TCL38_MultiAssayExp.rds'
-  shell:
-    """
-    Rscript scripts/get_multiassay.R \
-    {prefix}processed \
-    {prefix}
-    """
+# rule get_MultiAssay:
+#   input:
+#     prefix + 'processed/expr_list.rds',
+#     prefix + 'processed/gene_annotation.csv',
+#     prefix + 'processed/tx_annotation.csv',
+#     prefix + 'processed/rnaseq_samples.csv',
+#     prefix + 'processed/acgh_assay_data.rds',
+#     prefix + 'processed/acgh_samples.csv'
+#   output:
+#     prefix + 'TCL38_MultiAssayExp.rds'
+#   shell:
+#     """
+#     Rscript scripts/get_multiassay.R \
+#     {prefix}processed \
+#     {prefix}
+#     """
+
+rule get_pset:
+    input:
+        prefix + 'processed/expr_list.rds',
+        prefix + 'processed/gene_annotation.csv',
+        prefix + 'processed/tx_annotation.csv',
+        prefix + 'processed/rnaseq_samples.csv',
+        prefix + 'processed/acgh_assay_data.rds',
+        prefix + 'processed/acgh_samples.csv',
+        prefix + 'processed/raw_sensitivity.rds',
+        prefix + 'processed/sensitivity_info.rds',
+        prefix + 'processed/sensitivity_profile.rds'
+    output:
+        prefix + 'PSet_TCL38.rds'
+    shell:
+        """
+        Rscript scripts/get_pset.R {prefix}
+        """
+
+rule process_sensitivity:
+    input:
+        prefix + 'rnaseq/rnaseq_sample_summary.csv',
+        prefix + 'sensitivity/sensitivity.zip'
+    output:
+        prefix + 'processed/raw_sensitivity.rds',
+        prefix + 'processed/sensitivity_info.rds',
+        prefix + 'processed/sensitivity_profile.rds'
+    shell:
+        """
+        Rscript scripts/process_sens_data.R {prefix}
+        """
 
 rule process_expr:
-  input:
-    prefix + 'rnaseq/rnaseq.zip',
-    prefix + 'rnaseq/Gencode.v33.annotation.RData',
-    prefix + 'rnaseq/rnaseq_sample_summary.csv'
-  output:
-    prefix + 'processed/expr_list.rds',
-    prefix + 'processed/gene_annotation.csv',
-    prefix + 'processed/tx_annotation.csv',
-    prefix + 'processed/rnaseq_samples.csv'
-  shell:
-    """
-    Rscript scripts/process_rnaseq.R \
-    {prefix}rnaseq \
-    {prefix}processed
-    """
+    input:
+        prefix + 'rnaseq/rnaseq.zip',
+        prefix + 'rnaseq/Gencode.v33.annotation.RData',
+        prefix + 'rnaseq/rnaseq_sample_summary.csv'
+    output:
+        prefix + 'processed/expr_list.rds',
+        prefix + 'processed/gene_annotation.csv',
+        prefix + 'processed/tx_annotation.csv',
+        prefix + 'processed/rnaseq_samples.csv'
+    shell:
+        """
+        Rscript scripts/process_rnaseq.R \
+        {prefix}rnaseq \
+        {prefix}processed
+        """
 
 rule process_acgh:
-  input:
-    prefix + 'acgh/acgh.zip'
-  output:
-    prefix + 'processed/acgh_assay_data.rds',
-    prefix + 'processed/acgh_samples.csv'
-  shell:
-    """
-    Rscript scripts/process_acgh.R \
-    {prefix}acgh \
-    {prefix}processed
-    """
+    input:
+        prefix + 'acgh/acgh.zip'
+    output:
+        prefix + 'processed/acgh_assay_data.rds',
+        prefix + 'processed/acgh_samples.csv'
+    shell:
+        """
+        Rscript scripts/process_acgh.R \
+        {prefix}acgh \
+        {prefix}processed
+        """
