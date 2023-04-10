@@ -10,7 +10,7 @@ input_dir <- paste0(args[[1]], "processed")
 output_dir <- args[[1]]
 
 # input_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/processed'
-output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/'
+# output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/'
 
 # The csv file is created with rnaseq_processing/process_abundance.R
 rnaseq_samples <- read.csv(file.path(input_dir, "rnaseq_samples.csv"), row.names = 1)
