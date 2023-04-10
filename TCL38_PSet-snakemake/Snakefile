@@ -32,8 +32,7 @@ rule get_pset:
         prefix + 'processed/gene_annotation.csv',
         prefix + 'processed/tx_annotation.csv',
         prefix + 'processed/rnaseq_samples.csv',
-        prefix + 'processed/acgh_assay_data.rds',
-        prefix + 'processed/acgh_samples.csv',
+        prefix + 'processed/acgh_se.rds',
         prefix + 'processed/raw_sensitivity.rds',
         prefix + 'processed/sensitivity_info.rds',
         prefix + 'processed/sensitivity_profile.rds'
@@ -55,6 +54,18 @@ rule process_sensitivity:
     shell:
         """
         Rscript scripts/process_sens_data.R {prefix}
+        """
+
+rule get_acgh_se:
+    input:
+        prefix + 'rnaseq/rnaseq_sample_summary.csv',
+        prefix + 'processed/acgh_assay_data.rds',
+        prefix + 'processed/acgh_samples.csv'
+    output:
+        prefix + 'processed/acgh_se.rds'
+    shell:
+        """
+        Rscript scripts/get_acgh_se.R {prefix}processed
         """
 
 rule process_expr:

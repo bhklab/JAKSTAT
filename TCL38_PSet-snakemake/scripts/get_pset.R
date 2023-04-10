@@ -10,7 +10,7 @@ input_dir <- paste0(args[[1]], "processed")
 output_dir <- args[[1]]
 
 # input_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/processed'
-# output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/'
+output_dir <- '/Users/minoru/Code/bhklab/JAKSTAT/TCL38_PSet-snakemake/data/'
 
 # The csv file is created with rnaseq_processing/process_abundance.R
 rnaseq_samples <- read.csv(file.path(input_dir, "rnaseq_samples.csv"), row.names = 1)
@@ -70,8 +70,10 @@ drug <- data.frame(matrix(ncol = 0, nrow = (length(unique(sensitivity_info$drugi
 drug$drugid <- curationDrug$unique.drugid
 rownames(drug) <- curationDrug$unique.drugid
 
+acgh_se <- readRDS(file.path(input_dir, 'acgh_se.rds'))
+
 tcl38 <- PharmacoGx::PharmacoSet(
-  molecularProfiles = list("rnaseq" = se),
+  molecularProfiles = list("rnaseq" = se, 'acgh'=acgh_se),
   name = "TCL38",
   cell = cell,
   drug = drug,
@@ -86,5 +88,3 @@ tcl38 <- PharmacoGx::PharmacoSet(
 )
 
 saveRDS(tcl38, paste0(output_dir, "PSet_TCL38.rds"))
-
-# drugDoseResponseCurve('Panobinostat', 'ALL-SIL', list(tcl38, ctrpv2, ccle), plot.type = c("Fitted"))
