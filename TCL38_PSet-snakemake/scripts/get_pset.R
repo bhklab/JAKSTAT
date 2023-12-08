@@ -2,6 +2,7 @@ library(PharmacoGx)
 library(SummarizedExperiment)
 library(stringr)
 library(data.table)
+library(readxl)
 
 options(stringsAsFactors = FALSE)
 
@@ -72,8 +73,29 @@ rownames(drug) <- curationDrug$unique.drugid
 
 acgh_se <- readRDS(file.path(input_dir, 'acgh_se.rds'))
 
+##### Create variant call SE #####
+# The xlsx file was obtained from /hruh_mustjoki on Hetzner
+df <- as.data.frame(read_excel("202211_VariantCall/Annovar_merge/dt_merge.xlsx", sheet = 1))
+assay <- df[,which(names(df) %in% names(df)[grep("^A0062001", names(df))])]
+rownames(assay) <- df$Coord
+assay <- assay[,order(gsub(".*_", "", colnames(assay)))] # match sample order with rnaseq
+
+# filter for variant call info to make @molecularProfiles$variantcall@elementMetadata
+qc <- c(grep("^QUAL", names(df), value = TRUE), grep("^FILTER", names(df), value = TRUE))
+elementMetadata <- df[,which(names(df) %in% c("Coord", "Chr", "Start", "End", "Ref", "Alt", "Func.refGene", "ExonicFunc.refGene", "AAChange.refGene", qc))]
+
+# create colData object
+colData <- data.frame(vc_sample_name = colnames(assay), sample_name = rnaseq_samples$sample_name, cell = rnaseq_samples$cell, num_id = gsub(".*_", "", colnames(assay)), sampleid = paste0(rownames(rnaseq_samples)))
+rownames(colData) <- colData$sampleid
+colnames(assay) <- colData$sampleid
+
+# create summarized experiment object for variant calls
+vcSE <- SummarizedExperiment(assays = list(assay = assay), 
+  rowData = elementMetadata, colData = colData)
+vcSE@metadata$annotation <- "variantcall"
+
 tcl38 <- PharmacoGx::PharmacoSet(
-  molecularProfiles = list("rnaseq" = se, 'acgh'=acgh_se),
+  molecularProfiles = list("rnaseq" = se, 'acgh'=acgh_se, 'variantcall' = vcSE),
   name = "TCL38",
   cell = cell,
   drug = drug,
